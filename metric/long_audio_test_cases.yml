@@ -1,0 +1,90 @@
+# Status: APPROVED 2026-10-19 — FROZEN. Any change needs explicit user review + approval.
+# Clarified: overlap is removed only when >= min_overlap_words (2) match on both sides; one copy kept.
+# Design: /Users/jatinmishra/.claude/plans/currently-the-application-rejects-fancy-galaxy.md
+#         (folded into solutions/dictations_lld.md §6 "segmentation & merge" during implementation)
+# Defaults under test: max_audio_seconds=60, tolerance=0.25, max_audio_bytes=12 MiB,
+#   segment_seconds=10, segment_overlap_seconds=2, segment_max_overlap_words=12,
+#   segment_min_overlap_words=2, segment_max_edge_words=3, segment_concurrency=3
+# Revision 2026-10-19 (approved): merge tolerates garbled words at a cut (real Whisper run showed
+#   strict suffix==prefix duplicating text) -> LM-07 revised; LM-16..18, LC-07 added.
+
+success_metrics:
+  - {id: LAM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: LAM2, desc: "Existing dictation/audio tests still pass; only the 10s-limit boundary values change to 60s", target: 100%}
+  - {id: LAM3, desc: "Engine calls for audio <= segment_seconds + tolerance (backward compat)", target: exactly 1}
+  - {id: LAM4, desc: "Peak in-flight engine calls per request", target: "<= segment_concurrency"}
+  - {id: LAM5, desc: ruff + mypy strict clean, target: 0 errors}
+
+failure_criteria:
+  - any audio sample not covered by at least one segment
+  - a segment that lies entirely inside the previous one (wasted STT call)
+  - merged text duplicates an overlap that matched >= min_overlap_words words
+  - merge drops words that were NOT part of a matching overlap
+  - partial text written to the page when any segment fails
+  - audio <= 10.25s behaves differently from main (call count or text)
+  - silent segment sent to the engine
+
+test_cases:
+  # ───────── Config ─────────
+  - {id: LC-01, scenario: default Settings(), expect: "max_audio_seconds=60, max_audio_bytes=12582912, segment 10/2, overlap words 12/2, concurrency 3"}
+  - {id: LC-02, scenario: "env SEGMENT_SECONDS=15 SEGMENT_OVERLAP_SECONDS=3 SEGMENT_CONCURRENCY=5", expect: values picked up}
+  - {id: LC-03, scenario: "segment_overlap_seconds >= segment_seconds (2 vs 2, 5 vs 2)", expect: ValidationError at load}
+  - {id: LC-04, scenario: "segment_seconds <= 0 or segment_overlap_seconds < 0", expect: ValidationError}
+  - {id: LC-05, scenario: segment_concurrency = 0, expect: ValidationError}
+  - {id: LC-06, scenario: segment_min_overlap_words (5) > segment_max_overlap_words (3), expect: ValidationError}
+  - {id: LC-07, scenario: segment_max_edge_words = -1, expect: ValidationError}
+
+  # ───────── Duration / size limits ─────────
+  - {id: LL-01, scenario: "wav 59.9s, 60.0s, 60.25s", expect: accepted by decode + validate}
+  - {id: LL-02, scenario: "wav 60.3s", expect: 422 audio_too_long}
+  - {id: LL-03, scenario: 120s opus (small file), expect: AudioTooLongError raised during decode (early abort)}
+  - {id: LL-04, scenario: "API: wav(60.5)", expect: 422 audio_too_long; no engine call; nothing written}
+  - {id: LL-05, scenario: "upload of exactly 12 MiB vs 12 MiB + 1 byte", expect: "accepted by read_upload / 413 audio_too_large"}
+  - {id: LL-06, scenario: "API: 45s 44.1kHz stereo wav (~7.9 MB, would fail old 4 MiB cap)", expect: 201}
+
+  # ───────── split (pure) ─────────
+  - {id: LS-01, scenario: 5s clip, expect: "[clip] — same object, 1 segment"}
+  - {id: LS-02, scenario: "10.0s and 10.25s clips", expect: 1 segment each (within tolerance)}
+  - {id: LS-03, scenario: 10.5s clip, expect: "2 segments: [0,10], [8,10.5]"}
+  - {id: LS-04, scenario: 18s clip, expect: "2 segments: [0,10], [8,18] (last window exactly reaches end)"}
+  - {id: LS-05, scenario: 18.1s clip, expect: "3 segments: [0,10], [8,18], [16,18.1]"}
+  - {id: LS-06, scenario: 60s clip, expect: "8 segments starting 0,8,16,24,32,40,48,56; last is 56-60"}  # corrected 2026-10-19 (approved)
+  - {id: LS-07, scenario: "any duration in 10.5..60 step 0.37s (property)", expect: "union covers every sample; consecutive overlap == 2s exactly; no segment inside previous; each <= 10s"}
+  - {id: LS-08, scenario: overlap 0, expect: "segments touch: end[i] == start[i+1]; total samples == clip samples"}
+  - {id: LS-09, scenario: segment pcm content, expect: "equals clip.pcm[start:end] (sample-exact, 16 kHz)"}
+  - {id: LS-10, scenario: "is_silent on zeros / on 440Hz tone", expect: "True / False; validate() still raises no_speech on silent clip"}
+
+  # ───────── merge (pure) ─────────
+  - {id: LM-01, scenario: "['a b c d e', 'c d e f g']", expect: "'a b c d e f g'"}
+  - {id: LM-02, scenario: "['Hello, my dear world.', 'my dear World and more']", expect: "'Hello, my dear world. and more' (case/punct-insensitive match, prev wording kept)"}
+  - {id: LM-03, scenario: "Devanagari: ['मैं घर जा रहा हूँ', 'जा रहा हूँ और फिर']", expect: "'मैं घर जा रहा हूँ और फिर' (matras not stripped)"}
+  - {id: LM-04, scenario: "Devanagari with danda: ['वह आया। फिर गया', 'फिर गया वापस']", expect: "'वह आया। फिर गया वापस'"}
+  - {id: LM-05, scenario: "no overlap ['a b c', 'x y z']", expect: "'a b c x y z'"}
+  - {id: LM-06, scenario: "only 1 matching word ['and the', 'the cat'] with min=2", expect: "'and the the cat' (not removed)"}
+  - {id: LM-07, scenario: "['p a b c d', 'a b c d q'] with max_overlap_words=3 (revised, approved)", expect: "'p a b c d q' via partial run 'b c'; with max_edge_words=0 duplicate kept"}
+  - {id: LM-08, scenario: "next fully inside overlap ['a b c d', 'c d']", expect: "'a b c d'"}
+  - {id: LM-09, scenario: "longest suffix wins ['x y x y', 'x y x y z']", expect: "'x y x y z'"}
+  - {id: LM-10, scenario: "shorter segment caps limit ['a b c d e f g', 'f g']", expect: "'a b c d e f g'"}
+  - {id: LM-11, scenario: "empty/whitespace segments at start, middle, end ['', 'a b c', '  ', 'b c d', '']", expect: "'a b c d' (middle empty skipped; merge against last non-empty)"}
+  - {id: LM-12, scenario: single segment ['  hello   world '], expect: "'hello world' (whitespace collapsed only)"}
+  - {id: LM-13, scenario: all segments empty, expect: "'' (normalize then raises no_speech)"}
+  - {id: LM-14, scenario: "3+ segments chained ['a b c d', 'c d e f', 'e f g h']", expect: "'a b c d e f g h'"}
+  - {id: LM-16, scenario: "garbled tail: ['he gave him a silver watch and a silver watch.', 'gave him a silver watch and a small cottage']", expect: "'he gave him a silver watch and a small cottage'"}
+  - {id: LM-17, scenario: "garbled head ('eeper climbed the stairs…'); run more than max_edge_words from the cut", expect: "deduped / ignored (plain join) respectively"}
+  - {id: LM-18, scenario: real MLX Whisper output for 37.9s macOS `say` speech (5 segments), expect: exact original paragraph, no duplication}
+  - {id: LM-15, scenario: "punctuation-only token at boundary ['a b c —', 'b c — d']", expect: "'a b c — d' (pure-punct token normalizes to '' and still compares equal)"}
+
+  # ───────── transcribe_many (router) ─────────
+  - {id: LR-01, scenario: 4 clips, expect: "texts returned in clip order even if engine completes out of order"}
+  - {id: LR-02, scenario: 7 clips with concurrency 3, expect: "peak in-flight == 3; all 7 called"}
+  - {id: LR-03, scenario: silent middle clip, expect: "'' at that index; engine not called for it"}
+  - {id: LR-04, scenario: engine raises on clip 2 of 4, expect: error propagates (same AppError type/status)}
+  - {id: LR-05, scenario: existing transcribe(), expect: unchanged behaviour}
+
+  # ───────── API end-to-end (fake engine) ─────────
+  - {id: LA-01, scenario: "10s audio", expect: "exactly 1 engine call; response text identical to main"}
+  - {id: LA-02, scenario: "26.5s tone (corrected from 25s, approved), fake returns overlapping texts per segment", expect: "4 engine calls; 201; page contains merged text once, no duplicated overlap"}
+  - {id: LA-03, scenario: 25s audio, one segment raises 502, expect: "502; page file unchanged; idempotency cache not populated"}
+  - {id: LA-04, scenario: "25s audio: 8s tone + 17s silence", expect: "silent tail segments not sent; 201 with first segment text"}
+  - {id: LA-05, scenario: "60s audio, language=en (whisper fake w/ Semaphore(1))", expect: "8 sequential calls; 201"}  # corrected 2026-10-19 (approved)
+  - {id: LA-06, scenario: same Idempotency-Key replayed for a 25s request, expect: cached response; no extra engine calls}

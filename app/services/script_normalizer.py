@@ -45,14 +45,18 @@ def _script_warnings(text: str, language: Language) -> list[str]:
     return []
 
 
+def guard(text: str) -> str:
+    """The minimum before text may be stored: reject empty text, escape page-marker lines."""
+    if not text.strip():
+        raise NoSpeechError("Transcription is empty")
+    return _MARKER_LINE.sub(r"\\#", text)
+
+
 def normalize(text: str, language: Language) -> tuple[str, list[str]]:
     """NFC, collapse whitespace, escape page markers, and check the script (warn, never rewrite)."""
     text = unicodedata.normalize("NFC", text)
     lines = (" ".join(line.split()) for line in text.splitlines())
-    text = "\n".join(line for line in lines if line)
-    if not text:
-        raise NoSpeechError("Transcription is empty")
-    text = _MARKER_LINE.sub(r"\\#", text)
+    text = guard("\n".join(line for line in lines if line))
 
     warnings = _script_warnings(text, language)
     if warnings:

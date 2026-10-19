@@ -98,9 +98,37 @@ def decode(data: bytes, max_seconds: float) -> AudioClip:
     return AudioClip(pcm)
 
 
+def is_silent(clip: AudioClip, silence_rms_threshold: float) -> bool:
+    rms = float(np.sqrt(np.mean(np.square(clip.pcm, dtype=np.float64))))
+    return rms < silence_rms_threshold
+
+
 def validate(clip: AudioClip, max_seconds: float, silence_rms_threshold: float) -> None:
     if clip.duration > max_seconds:
         raise AudioTooLongError(f"Audio is {clip.duration:.2f}s; max is {max_seconds:g}s")
-    rms = float(np.sqrt(np.mean(np.square(clip.pcm, dtype=np.float64))))
-    if rms < silence_rms_threshold:
+    if is_silent(clip, silence_rms_threshold):
         raise NoSpeechError("No speech detected in audio")
+
+
+def split(
+    clip: AudioClip, segment_s: float, overlap_s: float, tolerance_s: float
+) -> list[AudioClip]:
+    """Cut a clip into `segment_s` windows starting every `segment_s - overlap_s` seconds.
+
+    Clips within `segment_s + tolerance_s` are returned whole, so short dictations make exactly
+    one engine call as before. The last window is clipped to the end of the audio; windows stop
+    as soon as one reaches the end, so no window lies entirely inside the previous one.
+    """
+    if clip.duration <= segment_s + tolerance_s:
+        return [clip]
+    size = int(round(segment_s * SAMPLE_RATE))
+    stride = size - int(round(overlap_s * SAMPLE_RATE))
+    total = len(clip.pcm)
+    segments: list[AudioClip] = []
+    start = 0
+    while True:
+        end = min(start + size, total)
+        segments.append(AudioClip(clip.pcm[start:end]))  # numpy view, no copy
+        if end == total:
+            return segments
+        start += stride

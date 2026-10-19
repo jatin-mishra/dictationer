@@ -1,0 +1,102 @@
+# Status: DRAFT — PENDING USER REVIEW.
+# Once approved this file is FROZEN; any change needs explicit user review + approval.
+# Design: solutions/instructions_lld.md
+
+success_metrics:
+  - {id: IM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: IM2, desc: Existing dictation tests unchanged and passing after the speech.py refactor, target: 100%}
+  - {id: IM3, desc: Edits applied to a page whose sha256 differs, target: 0}
+  - {id: IM4, desc: Partial writes on any /accept failure, target: 0}
+  - {id: IM5, desc: "Offsets in /instructions output that don't match the quoted text (resolver property test)", target: 0}
+  - {id: IM6, desc: ruff + mypy strict clean on new code, target: 0 errors}
+  - {id: IM7, desc: "/instructions p95 latency with real LLM, single-chapter instruction", target: "< 20 s (measured, not gated)"}
+  - {id: IM8, desc: "Real-LLM eval: 10 scripted instructions (hi / en / hinglish) on a fixture book → correct edit after /accept", target: "≥ 8/10 (measured, reported)"}
+
+failure_criteria:
+  - /instructions writes anything to disk
+  - /accept calls the LLM
+  - An edit splits a Devanagari letter or creates a phantom page
+  - ANTHROPIC_AGENT_* read from anywhere other than os.environ
+
+test_cases:
+  # ───────── EditExecutor (pure) ─────────
+  - {id: EX-01, scenario: remove a range, input: "'hello world', remove [5,11)", expect: "'hello'"}
+  - {id: EX-02, scenario: add at start / middle / end, expect: text inserted at 0, n, len}
+  - {id: EX-03, scenario: update a range, input: "'hello world', update [6,11) → 'there'", expect: "'hello there'"}
+  - {id: EX-04, scenario: several ops on one page given in any order, expect: same result as applying right-to-left}
+  - {id: EX-05, scenario: add at the start offset of a removed range, expect: inserted text survives the removal}
+  - {id: EX-06, scenario: overlapping ranges, expect: 422 invalid_edit}
+  - {id: EX-07, scenario: add strictly inside a removed range, expect: 422 invalid_edit}
+  - {id: EX-08, scenario: two adds at the same offset, expect: 422 invalid_edit}
+  - {id: EX-09, scenario: "offset < 0, from > to, to > len", expect: 422 (schema or executor)}
+  - {id: EX-10, scenario: size != len(text) / new_size != len(text), expect: 422}
+  - {id: EX-11, scenario: Devanagari word removed whole ("दुनिया" from "नमस्ते दुनिया"), expect: "'नमस्ते '"}
+  - {id: EX-12, scenario: offset lands on a matra / after a virama / after ZWJ, expect: 422 invalid_edit}
+  - {id: EX-13, scenario: "inserted text contains '\\n# page 7'", expect: escaped; parse finds no page 7}
+  - {id: EX-14, scenario: inserted text in NFD, expect: stored as NFC}
+  - {id: EX-15, scenario: remove everything on the page, expect: page kept with empty content}
+  - {id: EX-16, scenario: emoji / surrogate-free astral chars count as 1 code point, expect: offsets consistent with Python str}
+
+  # ───────── QuoteResolver (pure) ─────────
+  - {id: QR-01, scenario: unique target_text, expect: offsets match; content[from:to] == target}
+  - {id: QR-02, scenario: target appears 3 times, occurrence=2, expect: second match}
+  - {id: QR-03, scenario: occurrence beyond matches, expect: unresolved quote_not_found}
+  - {id: QR-04, scenario: quote not on the page, expect: unresolved quote_not_found}
+  - {id: QR-05, scenario: quote differs only by whitespace runs, expect: resolved to original offsets}
+  - {id: QR-06, scenario: quote in NFD vs page in NFC, expect: resolved}
+  - {id: QR-07, scenario: add before / after anchor, page_start, page_end, expect: correct at_offset}
+  - {id: QR-08, scenario: LLM names page not in chapter / chapter not in book, expect: unresolved page_not_found}
+  - {id: QR-09, scenario: two LLM edits overlap, expect: first kept, second unresolved conflicts_with_other_edit}
+  - {id: QR-10, scenario: resolved quote would split a letter, expect: unresolved}
+  - {id: QR-11, scenario: property test — random pages + random quotes, expect: "every resolved edit: content[from:to] == quote (IM5)"}
+  - {id: QR-12, scenario: content_sha256 in output, expect: equals sha256 of GET content for that page}
+
+  # ───────── ChapterStore.apply_edits ─────────
+  - {id: CS-01, scenario: apply edits to two pages, expect: one atomic write; other pages byte-identical}
+  - {id: CS-02, scenario: one page's sha mismatches, expect: 409 page_changed; file unchanged}
+  - {id: CS-03, scenario: one page's edits invalid, expect: 422; file unchanged (no partial apply)}
+  - {id: CS-04, scenario: page missing / chapter missing, expect: 404 page_not_found / chapter_not_found}
+  - {id: CS-05, scenario: concurrent apply_edits + append_to_page on same chapter, expect: serialised; both effects present or 409}
+  - {id: CS-06, scenario: preamble + other pages preserved, expect: unchanged after apply}
+  - {id: CS-07, scenario: book_outline, expect: "{chapter: [pages]} sorted; ignores non chapter-*.md files"}
+
+  # ───────── AgentLLM ─────────
+  - {id: LL-01, scenario: key / model read via os.environ, expect: client built with that key; model passed through}
+  - {id: LL-02, scenario: key or model unset, expect: startup warning; /instructions 502 llm_not_configured; dictation still 201}
+  - {id: LL-03, scenario: stop_reason refusal, expect: 502 llm_refused}
+  - {id: LL-04, scenario: stop_reason max_tokens / parsed_output None, expect: 502 llm_bad_output}
+  - {id: LL-05, scenario: RateLimitError / 5xx / connection / timeout, expect: 502 llm_upstream_error}
+  - {id: LL-06, scenario: AuthenticationError, expect: 502 llm_upstream_error, logged}
+  - {id: LL-07, scenario: book content block carries cache_control; instruction is the last block, expect: request shape asserted}
+
+  # ───────── InstructionExtractor (fake LLM) ─────────
+  - {id: IE-01, scenario: chapter + page spoken, expect: pass 2 gets only that chapter}
+  - {id: IE-02, scenario: chapter spoken, page not, expect: pass 2 gets whole chapter; LLM picks page}
+  - {id: IE-03, scenario: no chapter spoken, expect: pass 2 gets whole book}
+  - {id: IE-04, scenario: no chapter + book over instruction_max_book_chars, expect: 422 book_too_large; pass 2 not called}
+  - {id: IE-05, scenario: compound instruction across 2 chapters, expect: 2 pass-2 calls in parallel; 2 chapter blocks}
+  - {id: IE-06, scenario: pass 1 returns chapter not in outline, expect: treated as null → whole-book search}
+  - {id: IE-07, scenario: pass 1 sees outline only, expect: no page content in pass-1 request}
+
+  # ───────── API: POST /v1/instructions ─────────
+  - {id: AI-01, scenario: happy path hi / en / hinglish, expect: 200 schema-valid instruction_response; transcript echoed}
+  - {id: AI-02, scenario: nothing written, expect: data dir byte-identical before/after}
+  - {id: AI-03, scenario: unknown book, expect: 404 book_not_found; no STT / LLM call}
+  - {id: AI-04, scenario: all dictation audio/author errors, expect: same codes as dictation}
+  - {id: AI-05, scenario: all edits unresolved, expect: 200 with empty instructions + unresolved}
+
+  # ───────── API: POST /v1/books/{book}/chapters/{n}/accept ─────────
+  - {id: AA-01, scenario: round trip — /instructions block sent to /accept, expect: 200; GET shows edited text; new sha returned}
+  - {id: AA-02, scenario: path chapter != body chapter, expect: 422 chapter_mismatch}
+  - {id: AA-03, scenario: dictation appended between instructions and accept, expect: 409 page_changed; nothing written}
+  - {id: AA-04, scenario: same accept sent twice, expect: second → 409 (sha changed); no double edit}
+  - {id: AA-05, scenario: unknown action / missing text / bad sha format, expect: 422 validation}
+  - {id: AA-06, scenario: duplicate page entries in body, expect: 422 invalid_edit}
+  - {id: AA-07, scenario: LLM never called, expect: fake LLM call count == 0}
+  - {id: AA-08, scenario: other author's book, expect: 404}
+  - {id: AA-09, scenario: GET page now includes content_sha256, expect: old fields unchanged (backward compatible)}
+
+  # ───────── Real LLM (marked `llm`, needs env vars, costs money — run on approval) ─────────
+  - {id: RL-01, scenario: 10 scripted instructions on a fixture book (hi / en / hinglish), expect: "≥ 8/10 correct after /accept (IM8)"}
+  - {id: RL-02, scenario: latency of RL-01 runs, expect: p95 recorded (IM7)}
+  - {id: RL-03, scenario: repeat instruction on same chapter within 5 min, expect: cache_read_input_tokens > 0}

@@ -1,0 +1,69 @@
+# Status: DRAFT — PENDING USER REVIEW.
+# Once approved this file is FROZEN; any change needs explicit user review + approval.
+# Design: solutions/chapter_metadata_lld.md
+
+success_metrics:
+  - {id: CMM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: CMM2, desc: "Existing chapter-store / dictation scenarios still covered and passing (expected strings updated for new format only)", target: 100%}
+  - {id: CMM3, desc: STT calls made for a dictation into a missing chapter, target: 0}
+  - {id: CMM4, desc: ruff + mypy strict clean, target: 0 errors}
+
+failure_criteria:
+  - chapter_hash changes when only metadata (updated_at / name / summary) changes
+  - created_at changes after creation
+  - a stored (possibly stale) hash is trusted instead of recomputed
+  - page content or preamble altered by adding/reading front matter
+
+test_cases:
+  # ───────── Format: parse / serialize (pure) ─────────
+  - {id: CM-01, scenario: serialize chapter with meta + 2 pages, expect: "front matter in fixed key order, then '# page N, <sha256(content)>' blocks"}
+  - {id: CM-02, scenario: parse(serialize(x)) round-trip incl. Devanagari name and preamble, expect: identical meta, preamble, pages}
+  - {id: CM-03, scenario: legacy file without front matter, expect: meta = None, pages parsed as before}
+  - {id: CM-04, scenario: "old marker '# page 3' and lenient '#Page 3 , abc'", expect: "both parse as page 3; hash suffix ignored"}
+  - {id: CM-05, scenario: stored page hash is wrong (hand edit), expect: recomputed correctly on next write}
+  - {id: CM-06, scenario: "'---' opening fence but no closing fence", expect: treated as legacy; text kept in preamble; nothing lost}
+  - {id: CM-07, scenario: "chapter_name containing ': ' (e.g. 'Part 1: शुरुआत')", expect: round-trips exactly}
+  - {id: CM-08, scenario: unknown front-matter key (e.g. 'summary_hash: x'), expect: preserved after an append}
+  - {id: CM-09, scenario: empty chapter_summary, expect: "written as 'chapter_summary:' and parsed back as ''"}
+  - {id: CM-10, scenario: "page content containing a line '---'", expect: stays page content; front matter unaffected}
+  - {id: CM-11, scenario: BOM + CRLF in a file with front matter, expect: parsed; rewritten as LF, no BOM}
+
+  # ───────── Hashes ─────────
+  - {id: CH-01, scenario: page_hash of known text, expect: equals hashlib.sha256(text.encode()).hexdigest()}
+  - {id: CH-02, scenario: chapter_hash after only updated_at / name changes, expect: unchanged}
+  - {id: CH-03, scenario: chapter_hash after appending to any page, expect: changed}
+  - {id: CH-04, scenario: same pages written in different insertion order, expect: same chapter_hash}
+  - {id: CH-05, scenario: preamble edited, expect: chapter_hash unchanged (pages only)}
+  - {id: CH-06, scenario: chapter with no pages, expect: chapter_hash == sha256('')}
+
+  # ───────── Store: create / append ─────────
+  - {id: CS-01, scenario: create_chapter new, expect: "file has front matter only; created_at == updated_at == clock; name stored NFC"}
+  - {id: CS-02, scenario: create_chapter when file exists, expect: ChapterExistsError; file byte-identical}
+  - {id: CS-03, scenario: two concurrent create_chapter same chapter, expect: exactly one succeeds, one ChapterExistsError}
+  - {id: CS-04, scenario: append after create (clock advanced), expect: "updated_at = new time; created_at unchanged; chapter_hash refreshed"}
+  - {id: CS-05, scenario: append to missing chapter, expect: ChapterNotFoundError; no file/dir created}
+  - {id: CS-06, scenario: append to legacy file (no front matter), expect: "front matter added: name 'Chapter N', created_at = file birth/mtime, updated_at = now; preamble + pages kept"}
+  - {id: CS-07, scenario: concurrent appends (existing ST-20), expect: nothing lost; final hashes match final content}
+  - {id: CS-08, scenario: failed os.replace (existing ST-22), expect: old file byte-identical incl. metadata}
+  - {id: CS-09, scenario: read_page after writes, expect: content without hash suffix; available_pages unchanged semantics}
+  - {id: CS-10, scenario: read_page on created-but-empty chapter, expect: PageNotFoundError}
+
+  # ───────── API ─────────
+  - {id: CA-01, scenario: "POST /v1/books/{book}/chapters valid", expect: "201 {book, chapter, chapter_name, created_at, updated_at, chapter_hash}"}
+  - {id: CA-02, scenario: same chapter created twice, expect: 409 chapter_exists}
+  - {id: CA-03, scenario: "chapter_name empty / whitespace / >200 chars / contains newline", expect: 422}
+  - {id: CA-04, scenario: "chapter_number 0 / 1001 / missing", expect: 422}
+  - {id: CA-05, scenario: missing or invalid author-id header, expect: 400 invalid_author_id}
+  - {id: CA-06, scenario: "book name '!!!'", expect: 422 invalid_book_name}
+  - {id: CA-07, scenario: same chapter number for two different authors / books, expect: both 201, separate files}
+  - {id: CA-08, scenario: create chapter in a book that doesn't exist, expect: 404 book_not_found}
+  - {id: BA-01, scenario: POST /v1/books valid (Devanagari title), expect: "201 {book: slug, book_name: NFC title, created_at}; book.md written"}
+  - {id: BA-02, scenario: same book twice / title with same slug, expect: 409 book_exists}
+  - {id: BA-03, scenario: "book_name empty / whitespace / >128 / newline", expect: 422}
+  - {id: BA-04, scenario: "book_name '!!!'", expect: 422 invalid_book_name}
+  - {id: BA-05, scenario: legacy book folder without book.md, expect: 201; existing chapters untouched}
+  - {id: BA-06, scenario: missing author-id, expect: 400 invalid_author_id}
+  - {id: CD-01, scenario: dictation into a missing chapter, expect: 404 chapter_not_found; transcriber NOT called}
+  - {id: CD-02, scenario: dictation after create, expect: 201; file has updated hashes and updated_at}
+  - {id: CD-03, scenario: idempotent retry of a dictation, expect: single append; updated_at not bumped twice}
+  - {id: CD-04, scenario: GET page after dictation, expect: unchanged response shape (backward compatible)}

@@ -1,7 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,11 +29,34 @@ class Settings(BaseSettings):
 
     # Dictation input and storage
     data_root: Path = Path("data")
-    max_audio_seconds: float = 10.0
+    max_audio_seconds: float = 60.0
     audio_duration_tolerance_s: float = 0.25
-    max_audio_bytes: int = 4 * 1024 * 1024
+    max_audio_bytes: int = 12 * 1024 * 1024
     silence_rms_threshold: float = 0.003
     idempotency_ttl_s: float = 900.0
+
+    # Long audio is split into overlapping segments, transcribed in parallel, then merged.
+    segment_seconds: float = 10.0
+    segment_overlap_seconds: float = 2.0
+    segment_max_overlap_words: int = 12
+    segment_min_overlap_words: int = 2
+    segment_max_edge_words: int = 3  # garbled words tolerated at each side of a cut
+    segment_concurrency: int = 3
+    segment_merge: bool = True  # false: append segment texts as-is (for testing overlap)
+
+    @model_validator(mode="after")
+    def _check_segmentation(self) -> Self:
+        if self.segment_seconds <= 0:
+            raise ValueError("segment_seconds must be > 0")
+        if not 0 <= self.segment_overlap_seconds < self.segment_seconds:
+            raise ValueError("segment_overlap_seconds must be >= 0 and < segment_seconds")
+        if self.segment_concurrency < 1:
+            raise ValueError("segment_concurrency must be >= 1")
+        if not 1 <= self.segment_min_overlap_words <= self.segment_max_overlap_words:
+            raise ValueError("need 1 <= segment_min_overlap_words <= segment_max_overlap_words")
+        if self.segment_max_edge_words < 0:
+            raise ValueError("segment_max_edge_words must be >= 0")
+        return self
 
     @property
     def is_prod(self) -> bool:

@@ -1,0 +1,92 @@
+feature: long-audio-segmentation
+design: /Users/jatinmishra/.claude/plans/currently-the-application-rejects-fancy-galaxy.md (-> solutions/dictations_lld.md §6)
+tests: metric/long_audio_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: Plan approved (60s cap, 10s/2s segments, word-overlap merge, 12 MiB, bounded parallel)}
+  - {id: G2, done: true, desc: metric/long_audio_test_cases.yml approved (frozen after)}
+
+steps:
+  - {id: 1, done: true, desc: "config: 60s, 12 MiB, segment_* settings + model_validator (LC-*)"}
+  - {id: 2, done: true, desc: "audio: split() + is_silent(); update 10s boundary tests to 60s (LL-*, LS-*)"}
+  - {id: 3, done: true, desc: "services/transcript_merge.py merge() (LM-*)"}
+  - {id: 4, done: true, desc: "router.transcribe_many with Semaphore + silent skip (LR-*)"}
+  - {id: 5, done: true, desc: "dictationer.dictate: split -> transcribe_many -> merge -> normalize (LA-*)"}
+  - {id: 6, done: true, desc: "Update solutions/dictations_lld.md F1, §4.1, §6, §7"}
+  - {id: 7, done: true, desc: "Verify: make test, ruff, mypy strict; diff <=10s behaviour vs main"}
+
+review:
+  result: "391 passed (206 existing + 185 new incl. parametrized); ruff + mypy strict clean on app; changed files formatted"
+  behaviour_vs_main:
+    - "Audio <= 10.25s: unchanged — 1 engine call, same text (LA-01 + all existing API tests green)"
+    - "Audio 10.25-60.25s: was 422 audio_too_long, now split/merged -> 201"
+    - "Upload cap 4 MiB -> 12 MiB"
+  real_verification:
+    - "37.9s macOS `say` speech, real MLX Whisper, live uvicorn: 5 segments, merged text identical to the source paragraph; 5.9s incl. cold model load"
+  spec_changes_approved:
+    - "LS-06 / LA-05: 60s = 8 segments (not 7); LA-02 input 26.5s (hand-computed counts were wrong)"
+    - "Merge tolerates up to 3 garbled words each side of a cut (segment_max_edge_words); LM-07 revised, LM-16..18, LC-07 added — real Whisper output broke strict suffix==prefix"
+  follow_ups:
+    - "Not verified with real Sarvam (no key in this session): run a 30-60s hi/hinglish clip once"
+    - "Whisper: 8 segments share one Semaphore(1) with 20s queue timeout; a concurrent second long request could 503 — revisit if multiple users dictate at once"
+    - "Mobile app should raise its client-side recording cap from 10s to 60s"
+    - "Added 2026-10-19: segment_merge setting + ?merge=false query (raw append, only empty/page-marker guards). No new tests by user's choice; live-verified: merge=false shows repeated overlap, default merges, merge=maybe -> 422"
+    - "Pre-existing: ruff format would change app/main.py + 2 other untouched files; tests/audio_samples.py has mypy errors (not in make typecheck scope)"
+
+---
+feature: instructions-and-accept
+design: solutions/instructions_lld.md
+tests: metric/instructions_test_cases.yml
+status: awaiting_approval   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: false, desc: LLD (solutions/instructions_lld.md) approved}
+  - {id: G2, done: false, desc: metric/instructions_test_cases.yml approved (frozen after)}
+  - {id: G3, done: false, desc: "ANTHROPIC_AGENT_API_KEY + ANTHROPIC_AGENT_MODEL exported; approval to spend on RL-* real-LLM tests"}
+
+steps:
+  - {id: 1, done: false, desc: "uv add anthropic; Settings: llm_timeout_s, llm_effort, instruction_max_book_chars"}
+  - {id: 2, done: false, desc: "Extract services/speech.transcribe_upload from dictationer.py; dictation tests stay green (IM2)"}
+  - {id: 3, done: false, desc: "schemas/instructions.py (discriminated Edit union + validators, LLM I/O models)"}
+  - {id: 4, done: false, desc: "edit_executor.py + letter-boundary guard + EX-* tests"}
+  - {id: 5, done: false, desc: "quote_resolver.py + QR-* tests (incl. property test)"}
+  - {id: 6, done: false, desc: "ChapterStore: book_outline, read_chapter_pages, apply_edits (lock, sha, atomic) + CS-* tests; GET gains content_sha256"}
+  - {id: 7, done: false, desc: "llm.py AgentLLM (os.environ key/model, messages.parse, error mapping, caching) + LL-* tests"}
+  - {id: 8, done: false, desc: "instruction_extractor.py (pass 1 outline-only, pass 2 per chapter / whole book, budget) + IE-* tests"}
+  - {id: 9, done: false, desc: "api/instructions.py routes + router + lifespan wiring + AI-*/AA-* tests"}
+  - {id: 10, done: false, desc: "Verify: make test, ruff, mypy strict"}
+  - {id: 11, done: false, desc: "Real-LLM run RL-01..03 (after G3); record IM7 / IM8"}
+  - {id: 12, done: false, desc: "Add curls to solutions/dictation_curls.md; fill review section"}
+
+review: {}
+
+---
+feature: chapter-metadata
+design: solutions/chapter_metadata_lld.md
+tests: metric/chapter_metadata_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: LLD (solutions/chapter_metadata_lld.md) approved, incl. C6 behaviour change}
+  - {id: G2, done: true, desc: metric/chapter_metadata_test_cases.yml approved (frozen after)}
+
+steps:
+  - {id: 1, done: true, desc: "chapter_store: ChapterMeta, front matter split/render, marker regex with hash, page_hash/chapter_hash, injectable clock"}
+  - {id: 2, done: true, desc: "chapter_store: create_book (book.md), create_chapter, chapter_exists, ChapterExistsError; append requires chapter, refreshes updated_at + chapter_hash; legacy migration"}
+  - {id: 3, done: true, desc: "schemas/books.py: CreateBookRequest, BookResponse, CreateChapterRequest (name NFC, 1..200, single-line), ChapterResponse"}
+  - {id: 4, done: true, desc: "api/books.py: POST /v1/books, POST /v1/books/{book}/chapters; pre-STT chapter_exists check in /v1/dictations"}
+  - {id: 5, done: true, desc: "tests: update existing expected strings; add CM/CH/CS/CA/CD cases"}
+  - {id: 6, done: true, desc: "Verify: make test, ruff, mypy strict; diff behaviour vs main on a legacy file"}
+
+review:
+  approval: "User replied 'write create book and create chapter apis as well' — taken as approval of the LLD (incl. C6) plus scope addition C11/C12"
+  results: "make test 206 passed (baseline 150); ruff clean; mypy strict clean"
+  behaviour_vs_main:
+    - "Dictation into a chapter that was never created: main auto-created it; now 404 chapter_not_found before STT (C6)"
+    - "Legacy chapter file: same pages + preamble; front matter added on the next write (verified e2e)"
+    - "GET page response shape unchanged"
+  existing_tests_changed: "setup only (create book/chapter first) and expected file strings for the new format; no scenario removed"
+  follow_ups:
+    - "AI chapter_summary (skipped by user)"
+    - "Instructions feature can reuse page_hash as content_sha256"

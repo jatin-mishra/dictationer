@@ -1,0 +1,10 @@
+# Generic patterns learned from corrections. Review at session start.
+lessons:
+  - id: L1
+    date: 2026-10-19
+    pattern: "Expected counts in a test-case spec were computed by hand and were wrong (window count off by one)."
+    rule: "Before submitting a test spec for review, compute every numeric expectation by running the actual rule (short script or worked table), especially counts at boundaries / last window."
+  - id: L2
+    date: 2026-10-19
+    pattern: "Text-matching algorithm specified and frozen from synthetic examples; real STT output broke the assumption (words at a cut get garbled)."
+    rule: "When an algorithm consumes model/engine output, run it on one real sample before freezing the spec; derive edge cases from that real output."
