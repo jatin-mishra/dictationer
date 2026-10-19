@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dictationer-waitlist",
+  "main": "./src/worker.js",
+  "compatibility_date": "2026-10-16",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dictationer-waitlist",
+      "database_id": "badace00-6619-426b-8cbe-13e29ce8eecb"
+    }
+  ],
+  "vars": {
+    "SITE_URL": "https://www.dictationer.net"
+  }
+  // Secrets (never in this file): EXPORT_KEY, and optionally BREVO_API_KEY + SENDER_EMAIL
+  //   npx wrangler secret put EXPORT_KEY
+}

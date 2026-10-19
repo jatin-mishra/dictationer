@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--PREVIEW-START-->
+<title>Dictationer First Edition</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Speak your book in Hindi or English. Every word stays yours. Proofreading, covers and print-ready files included. Join the First Edition list.">
+<meta name="theme-color" content="#183C39">
+<meta property="og:title" content="Dictationer · आपकी आवाज़, आपकी किताब · Your book, in your own voice">
+<meta property="og:description" content="Speak your book in Hindi or English. Every word stays yours. Join the First Edition list.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23183c39'/%3E%3Crect x='16' y='8' width='8' height='17' rx='4' fill='%23efe4cb'/%3E%3Cpath d='M11 20a9 9 0 0018 0M20 29v5' fill='none' stroke='%23efe4cb' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Mukta:wght@400;500;600;700&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap">
+<style>
+/* Layout: a hardbound book in Dictationer's own colours, resting on a linen desk. Open spread (hero) >
+   cream pages set as chapters (centred openers, left-set text on a narrow measure) > colophon > closed back cover.
+   One theme by choice: books are cream. */
+:root {
+  --cloth: #183C39;        /* Dictationer green, as bookcloth */
+  --cloth-deep: #102D2A;
+  --gold: #CDAE6A;         /* foil */
+  --gold-hi: #F1E6C8;
+  --gold-ink: #866A2E;     /* foil colour that reads on paper */
+  --paper: #F7F1E3;        /* page */
+  --sheet: #FFFDF8;        /* a loose sheet, the app's paper */
+  --ink: #26231F;
+  --muted: #675F55;
+  --ribbon: #B9583A;       /* Dictationer coral, deepened for a ribbon */
+  --pen: #2A47A8;          /* ballpoint ink for handwriting */
+  --line: #E4DAC4;
+  --cream: #EFE4CB;        /* Dictationer cream */
+  --ok: #2F6B4F;
+  --desk: #E6DECE;         /* linen desk the book rests on */
+  --desk-ink: #5E5547;
+  --leaf: #FFFDF7;         /* inside pages */
+  --leaf-edge: #E9DFC9;
+
+  --display: "Tiro Devanagari Hindi", "Noto Serif Devanagari", Georgia, serif;
+  --body: "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+  --hand: "Kalam", "Mukta", cursive;
+
+  --t-sm: 0.9375rem;
+  --t-base: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --t-md: clamp(1.2rem, 1.05rem + 0.5vw, 1.45rem);
+  --t-lg: clamp(1.75rem, 1.3rem + 1.8vw, 2.75rem);
+  --t-xl: clamp(2.35rem, 1.4rem + 4.2vw, 4.6rem);
+  --measure: 36rem;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: var(--t-base); line-height: 1.65; }
+html[lang="hi"] body { line-height: 1.8; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--pen); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--pen); outline-offset: 3px; border-radius: 4px; }
+.gutter { padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.shell { max-width: 1160px; margin: 0 auto; }
+
+/* ---------- desk + open book (hero) ---------- */
+.desk { background-color: var(--desk);
+  background-image: repeating-linear-gradient(0deg, rgba(94,85,71,0.035) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(94,85,71,0.03) 0 1px, transparent 1px 4px); }
+.hero-desk { position: relative; padding-block: max(16px, env(safe-area-inset-top, 0px)) clamp(64px, 9vw, 120px); overflow-x: clip; }
+.desk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-block: 6px clamp(24px, 4vw, 44px); }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--cloth); min-width: 0; }
+.brand svg { width: 34px; height: 34px; flex: 0 0 auto; }
+.brand span { font-family: var(--display); font-size: 1.45rem; line-height: 1; padding-top: 4px; }
+.lang { display: flex; align-items: center; gap: 8px; }
+.lang label { font-size: var(--t-sm); color: var(--desk-ink); }
+.prefs { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: flex-end; }
+.lang select {
+  font: 500 var(--t-sm)/1.2 var(--body); color: var(--ink); background-color: var(--leaf);
+  border: 1px solid #CFC3AA; border-radius: 999px; padding: 8px 34px 8px 14px; min-height: 40px; max-width: 9.5rem;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--cloth) 50%), linear-gradient(135deg, var(--cloth) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+
+.spread { position: relative; }
+.pages { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "text" "sheet" "plate"; gap: 28px; }
+.title-block { grid-area: text; min-width: 0; display: grid; gap: 20px; align-content: start; }
+.sheet-wrap { grid-area: sheet; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.bookplate { grid-area: plate; align-self: start; }
+.title-block .kicker { font-family: var(--display); font-style: italic; font-size: var(--t-sm); }
+.title-block h1 { font-size: var(--t-xl); line-height: 1.06; letter-spacing: -0.01em; }
+html[lang="hi"] .title-block h1 { line-height: 1.32; letter-spacing: 0; }
+.title-block .sub { font-size: var(--t-md); line-height: 1.55; max-width: 30em; }
+.watch { display: inline-flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: 600 var(--t-sm)/1.2 var(--body); cursor: pointer; opacity: 0.92; }
+.watch:hover, .watch:focus-visible { opacity: 1; }
+.watch-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #DF815D; color: #fff; font-size: 13px; padding-left: 2px; }
+.yt-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+.yt-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+html[lang="hi"] .title-block .sub { line-height: 1.75; }
+
+/* phones and tablets: a closed hardcover, then the writing sheet, then the bookplate */
+@media (max-width: 979px) {
+  .title-block {
+    position: relative; color: var(--cream); background-color: var(--cloth);
+    background-image: linear-gradient(90deg, rgba(0,0,0,0.32) 0, rgba(0,0,0,0.18) 14px, rgba(205,174,106,0.55) 14px, rgba(205,174,106,0.55) 15px, rgba(0,0,0,0.16) 15px, transparent 20px),
+      radial-gradient(120% 80% at 25% 0%, rgba(255,255,255,0.08), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 4px),
+      repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 4px);
+    border-radius: 4px 12px 12px 4px; padding: 40px 26px 44px 44px; margin-right: 8px;
+    box-shadow: 3px 2px 0 -1px #F7F0DF, 5px 3px 0 -1px #E3D7BE, 7px 4px 0 -1px #F7F0DF, 9px 5px 0 -1px #DCCFB4,
+      0 24px 40px -22px rgba(40,30,15,0.6);
+  }
+  .title-block::before { content: ""; position: absolute; inset: 12px 12px 12px 30px; border: 1px solid rgba(205,174,106,0.45); border-radius: 2px; pointer-events: none; }
+  .title-block > * { position: relative; }
+  .title-block .kicker { color: var(--gold); }
+  .title-block h1 { background: linear-gradient(100deg, #BE9C55 0%, var(--gold-hi) 34%, #CFAE68 54%, #F6EDD3 72%, #BE9C55 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .title-block .sub { color: rgba(239,228,203,0.9); }
+  .ribbon { display: none; }
+}
+
+/* desktop: the book lies open; left page = title page + bookplate, right page = the ruled writing page */
+@media (min-width: 980px) {
+  .spread { padding: 18px; border-radius: 16px; background-color: var(--cloth);
+    background-image: radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,0.07), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 4px),
+      repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 4px);
+    box-shadow: 0 50px 70px -40px rgba(45,35,20,0.55), 0 12px 24px -12px rgba(45,35,20,0.4); }
+  .pages { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "text sheet" "plate sheet"; gap: 0;
+    grid-template-rows: auto 1fr; border-radius: 4px;
+    background: linear-gradient(90deg, #F3EBD9 0%, var(--leaf) 5%, var(--leaf) 43%, #EFE6D2 48.6%, #DCD0B6 50%, #EFE6D2 51.4%, var(--leaf) 57%, var(--leaf) 95%, #F3EBD9 100%);
+    box-shadow: -3px 0 0 #F7F0DF, -5px 1px 0 var(--leaf-edge), -7px 2px 0 #F7F0DF, -9px 3px 0 #DCCFB4,
+                 3px 0 0 #F7F0DF,  5px 1px 0 var(--leaf-edge),  7px 2px 0 #F7F0DF,  9px 3px 0 #DCCFB4; }
+  .title-block { padding: 64px 56px 28px 60px; color: var(--ink); }
+  .title-block .kicker { color: var(--gold-ink); }
+  .title-block h1 { color: var(--cloth); font-size: clamp(2.6rem, 1.2rem + 3vw, 4rem); }
+  .title-block .sub { color: var(--muted); font-size: 1.2rem; }
+  .pages .bookplate { margin: 8px 64px 64px 60px; width: auto; }
+  .sheet-wrap { position: relative; padding: 52px 52px 52px 96px; align-content: start;
+    background-image: repeating-linear-gradient(to bottom, transparent 0 35px, #DCE5F2 35px 36px); background-position: 0 42px; }
+  .sheet-wrap::before { content: ""; position: absolute; top: 0; bottom: 0; left: 80px; width: 1.5px; background: #E07A73; opacity: 0.8; }
+  .sheet-wrap .sheet { transform: none; box-shadow: none; background: transparent; padding: 0; max-width: none; width: 100%; }
+  .sheet-wrap .sheet::before { display: none; }
+  .sheet-wrap .sheet .note { left: -88px; width: 70px; }
+  .sheet-wrap .typeset { background: var(--leaf); }
+  .page-no { position: absolute; bottom: 22px; font-family: var(--display); font-size: 0.85rem; color: var(--muted); }
+}
+@media (max-width: 979px) { .page-no { display: none; } }
+
+@media (max-width: 420px) { .lang label { display: none; } .lang select { max-width: 7.5rem; } .prefs { gap: 8px; } .brand span { font-size: 1.25rem; } .brand svg { width: 30px; height: 30px; }
+  .sheet { transform: rotate(0.8deg); padding-left: 52px; } .sheet::before { left: 38px; } .sheet .note { width: 30px; left: 4px; }
+  .title-block { padding: 36px 20px 40px 38px; } .title-block::before { inset: 10px 10px 10px 26px; } }
+
+/* the writing sheet: voice becomes ink */
+.sheet {
+  position: relative; width: calc(100% - 10px); max-width: 470px; transform: rotate(1.2deg);
+  background-color: var(--sheet); color: var(--ink); border-radius: 3px;
+  padding: 24px 22px 22px 58px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 35px, #DCE5F2 35px 36px);
+  background-position: 0 20px;
+  box-shadow: 0 26px 44px -26px rgba(45,35,20,0.55), 0 2px 0 rgba(0,0,0,0.06);
+}
+.sheet::before { content: ""; position: absolute; top: 0; bottom: 0; left: 42px; width: 1.5px; background: #E07A73; }
+.sheet .note { position: absolute; left: 5px; width: 34px; text-align: center; font-family: var(--hand); font-size: 0.8rem; line-height: 1.05; color: var(--ribbon); }
+.wave { display: flex; align-items: center; gap: 4px; height: 36px; margin-bottom: 16px; overflow: hidden; }
+.wave i { flex: 0 0 4px; border-radius: 3px; background: var(--pen); opacity: 0.8; animation: talk 0.9s ease-in-out infinite alternate; }
+@keyframes talk { from { transform: scaleY(0.28); } to { transform: scaleY(1.05); } }
+.spoken { font-family: var(--hand); color: var(--pen); font-size: clamp(1.1rem, 0.95rem + 0.8vw, 1.4rem); line-height: 36px; }
+.spoken span { display: block; }
+.typeset { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); background: var(--sheet); font-family: var(--display); font-size: clamp(1.1rem, 1rem + 0.5vw, 1.3rem); line-height: 1.55; }
+.next-line { margin-top: 26px; font-family: var(--hand); color: rgba(42,71,168,0.45); font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.3rem); line-height: 36px; }
+.next-line i { display: inline-block; width: 2px; height: 1.1em; margin-left: 4px; vertical-align: -0.15em; background: var(--pen); animation: caret 1.1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .next-line i { animation: none; } }
+@media (max-width: 979px) { .next-line { display: none; } }
+.typeset small { display: block; margin-top: 8px; font-family: var(--body); font-size: var(--t-sm); color: var(--ok); line-height: 1.4; }
+.play .spoken span { opacity: 0; animation: ink 0.9s ease-out forwards; }
+.play .spoken span:nth-child(1) { animation-delay: 0.6s; }
+.play .spoken span:nth-child(2) { animation-delay: 1.5s; }
+.play .typeset { opacity: 0; animation: ink 0.8s ease-out 2.6s forwards; }
+@keyframes ink { from { opacity: 0; filter: blur(3px); transform: translateY(3px); } to { opacity: 1; filter: none; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .wave i { animation-duration: 2.4s !important; }
+  .play .spoken span, .play .typeset { animation: none !important; opacity: 1 !important; }
+}
+
+/* cloth + foil helpers (back cover) */
+.cloth { background-color: var(--cloth); color: var(--cream);
+  background-image: radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,0.07), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 4px); }
+.foil { background: linear-gradient(100deg, #BE9C55 0%, var(--gold-hi) 34%, #CFAE68 54%, #F6EDD3 72%, #BE9C55 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* bookplate (the form) */
+.bookplate {
+  position: relative; background: var(--sheet); color: var(--ink); border-radius: 6px;
+  padding: 26px clamp(18px, 3vw, 28px) 22px; display: grid; gap: 14px; max-width: 34rem; width: calc(100% - 12px);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 0 5px var(--sheet), 0 0 0 6px rgba(205,174,106,0.75), 0 24px 50px -30px rgba(0,0,0,0.7);
+  margin: 6px; scroll-margin-top: 24px;
+}
+.bookplate .exl { font-family: var(--display); font-style: italic; color: var(--gold-ink); font-size: var(--t-sm); text-align: center; }
+.bookplate h2 { font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.7rem); text-align: center; line-height: 1.25; }
+html[lang="hi"] .bookplate h2 { line-height: 1.45; }
+.stack { display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label { font-weight: 600; font-size: var(--t-sm); }
+.pair { display: grid; gap: 12px; }
+@media (min-width: 560px) { .pair { grid-template-columns: 1.35fr 1fr; } }
+input[type="email"], input[type="text"], input[type="tel"], select.in, textarea {
+  font: inherit; font-size: 1rem; color: var(--ink); background: #FFFFFF; width: 100%;
+  border: 1.5px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 50px;
+}
+input:focus, select.in:focus, textarea:focus { outline: none; border-color: var(--pen); box-shadow: 0 0 0 3px rgba(42,71,168,0.18); }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: var(--t-sm); color: var(--muted); line-height: 1.5; }
+.check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--cloth); flex: 0 0 auto; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  font: 700 1.05rem/1.25 var(--body); min-height: 54px; padding: 12px 24px; border-radius: 12px; cursor: pointer; text-decoration: none;
+  color: var(--cream); border: 1px solid var(--cloth-deep); background: var(--cloth);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 16px -10px rgba(0,0,0,0.6);
+}
+.btn:hover { background: #1F4A46; }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.65; cursor: progress; }
+.btn.foil-btn { color: var(--cloth-deep); border-color: #A6894A; background: linear-gradient(180deg, #F4E9C9 0%, #DDC287 55%, #CDAE6A 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 6px 16px -10px rgba(0,0,0,0.6); }
+.btn.foil-btn:hover { filter: brightness(1.04); }
+.btn.ghost { background: transparent; color: var(--cloth); border: 1.5px solid var(--cloth); box-shadow: none; }
+.bookplate .btn { width: 100%; }
+.fine { font-size: var(--t-sm); color: var(--muted); text-align: center; }
+.msg { min-height: 1.3em; font-size: var(--t-sm); color: var(--ribbon); text-align: center; }
+.msg:empty { min-height: 0; }
+.demo { font-size: 0.85rem; color: var(--muted); text-align: center; font-style: italic; }
+
+/* thank-you */
+.welcome { display: grid; gap: 14px; text-align: center; }
+.welcome:focus { outline: none; }
+.welcome .pos { font-family: var(--display); font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem); line-height: 1.35; }
+.welcome .pos b { font-weight: 400; color: var(--ribbon); font-size: 1.3em; }
+.share { display: grid; gap: 10px; }
+.share-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.reflink { font-size: 0.9rem !important; min-height: 44px !important; color: var(--muted) !important; }
+.rewards { display: grid; gap: 6px; text-align: left; font-size: var(--t-sm); color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.rewards b { color: var(--ink); font-family: var(--hand); font-size: 1.15rem; margin-right: 6px; }
+.toggle { background: none; border: 0; padding: 6px 0; font: 600 var(--t-sm)/1.4 var(--body); color: var(--cloth); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.profile { display: grid; gap: 16px; text-align: left; border-top: 1px solid var(--line); padding-top: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.chips legend { font-weight: 600; font-size: var(--t-sm); padding: 0; margin-bottom: 8px; }
+.chips label { position: relative; display: inline-block; }
+.chips input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.chips span { display: inline-block; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: #FFFFFF; font-size: var(--t-sm); line-height: 1.35; }
+.chips input:checked + span { border-color: var(--cloth); background: rgba(24,60,57,0.1); }
+.chips input:focus-visible + span { outline: 3px solid var(--pen); outline-offset: 2px; }
+.reset { background: none; border: 0; padding: 0; font: inherit; font-size: 0.85rem; color: var(--muted); text-decoration: underline; cursor: pointer; justify-self: center; }
+
+/* plan picker shown right after joining */
+.plans { display: grid; gap: 12px; text-align: left; border-top: 1px solid var(--line); padding-top: 16px; }
+.plans fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; min-width: 0; }
+.plans legend { display: grid; gap: 4px; padding: 0; margin-bottom: 6px; }
+.plan-q { font-family: var(--display); font-size: 1.2rem; line-height: 1.35; color: var(--ink); }
+html[lang="hi"] .plan-q { line-height: 1.55; }
+.plan-note { font-size: var(--t-sm); color: var(--muted); }
+.plan { position: relative; display: block; cursor: pointer; }
+.plan input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.plan-card { display: grid; gap: 6px; padding: 14px 16px 14px 44px; border: 1.5px solid var(--line); border-radius: 12px; background: #FFFFFF; position: relative; }
+.plan-card::before { content: ""; position: absolute; left: 16px; top: 18px; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #B9AE97; background: #FFFFFF; }
+.plan input:checked + .plan-card { border-color: var(--cloth); background: rgba(24,60,57,0.06); box-shadow: 0 0 0 1px var(--cloth); }
+.plan input:checked + .plan-card::before { border-color: var(--cloth); background: radial-gradient(circle, var(--cloth) 0 4px, #FFFFFF 4.5px); }
+.plan input:focus-visible + .plan-card { outline: 3px solid var(--pen); outline-offset: 2px; }
+.plan-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.plan-head b { font-family: var(--display); font-weight: 400; font-size: 1.2rem; color: var(--cloth); }
+.plan-price { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.plan-for { font-size: 0.9rem; color: var(--ribbon); font-weight: 600; }
+.plan-card ul { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 3px; }
+.plan-card li { font-size: 0.92rem; color: var(--muted); padding-left: 18px; position: relative; line-height: 1.45; }
+.plan-card li::before { content: ""; position: absolute; left: 2px; top: 0.5em; width: 8px; height: 4.5px; border-left: 1.6px solid var(--ok); border-bottom: 1.6px solid var(--ok); transform: rotate(-45deg); }
+.plan-anchor { font-size: 0.85rem; color: var(--muted); }
+.refcount { font-size: var(--t-sm); color: var(--ok); font-weight: 600; text-align: center; }
+.rewards .got b { color: var(--ok); }
+.plan-done { font-size: var(--t-sm); color: var(--ok); font-weight: 600; text-align: center; border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* ribbon bookmark hanging out of the bottom of the open book */
+.ribbon { position: absolute; z-index: 0; left: calc(50% + 34px); bottom: -74px; width: 22px; height: 110px; pointer-events: none;
+  background: linear-gradient(90deg, #9E4429, var(--ribbon) 40%, #DF815D);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%); }
+
+/* ---------- pages ---------- */
+.chapter { padding-block: clamp(72px, 10vw, 120px) clamp(56px, 8vw, 88px); }
+.chapter + .chapter { border-top: 1px solid var(--line); }
+.opener { text-align: center; display: grid; gap: 12px; justify-items: center; margin-bottom: clamp(32px, 5vw, 48px); }
+.opener .label { font-family: var(--display); font-style: italic; color: var(--ribbon); font-size: var(--t-md); }
+.opener h2 { font-size: var(--t-lg); line-height: 1.2; max-width: 18em; }
+html[lang="hi"] .opener h2 { line-height: 1.45; }
+.fleuron { width: 120px; height: 12px; position: relative; }
+.fleuron::before { content: ""; position: absolute; left: 0; right: 0; top: 5.5px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.fleuron::after { content: ""; position: absolute; left: 50%; top: 2px; width: 8px; height: 8px; background: var(--gold); transform: translateX(-50%) rotate(45deg); }
+.measure { max-width: var(--measure); margin: 0 auto; }
+.folio { text-align: center; margin-top: clamp(40px, 6vw, 64px); font-family: var(--display); color: var(--muted); font-size: var(--t-sm); }
+
+.prose { font-family: var(--display); font-size: var(--t-md); line-height: 1.65; }
+html[lang="hi"] .prose { line-height: 1.85; }
+html[lang="en"] .dropcap::first-letter { float: left; font-size: 3.6em; line-height: 0.82; padding: 6px 10px 0 0; color: var(--cloth); }
+.pains { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 14px; }
+.pains li { padding-left: 34px; position: relative; font-size: var(--t-md); line-height: 1.5; }
+.pains li::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 20px; height: 1.5px; background: var(--ribbon); }
+
+.steps { list-style: none; padding: 0; margin: 0 auto; display: grid; gap: 26px; }
+.steps li { display: grid; grid-template-columns: 56px 1fr; gap: 2px 16px; align-items: baseline; }
+.steps .n { grid-row: span 2; font-family: var(--display); font-size: 2.4rem; line-height: 1; color: var(--gold-ink); text-align: center; }
+.steps b { font-family: var(--display); font-weight: 400; font-size: var(--t-md); }
+.steps .d { color: var(--muted); grid-column: 2; }
+
+.exhibits { display: grid; gap: 48px; max-width: 68rem; margin: 0 auto; }
+@media (min-width: 900px) { .exhibits { grid-template-columns: 1.2fr 1fr 1fr; gap: 36px; } }
+.exhibit { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.exhibit h3 { font-size: var(--t-md); }
+.exhibit p { color: var(--muted); }
+.plate { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 18px; min-height: 260px; display: grid; align-content: center; gap: 12px; }
+.cmd { font-family: var(--hand); color: var(--pen); font-size: 1.12rem; line-height: 1.4; }
+.cmd::before { content: "\201C"; } .cmd::after { content: "\201D"; }
+.scene { font-family: var(--display); line-height: 1.65; }
+.scene del { color: var(--ribbon); text-decoration-thickness: 1.5px; }
+.scene ins { text-decoration: none; background: rgba(47,107,79,0.13); border-bottom: 2px solid var(--ok); }
+.decide { display: flex; gap: 8px; flex-wrap: wrap; }
+.decide span { font-size: 0.85rem; border-radius: 999px; padding: 4px 12px; border: 1.5px solid var(--line); }
+.decide span.yes { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.slip { justify-self: center; width: min(100%, 260px); background: #FFF6C9; padding: 16px 18px 18px; transform: rotate(-2deg); box-shadow: 0 12px 22px -16px rgba(0,0,0,0.5); display: grid; gap: 6px; }
+.slip .t { font-size: 0.8rem; color: var(--muted); }
+.slip .i { font-family: var(--hand); color: var(--pen); font-size: 1.25rem; line-height: 1.35; }
+.slip .c { justify-self: start; font-size: 0.78rem; color: var(--ribbon); font-weight: 600; }
+.book { display: flex; gap: 16px; align-items: flex-end; justify-content: center; }
+.cover { position: relative; width: 150px; aspect-ratio: 2 / 3; max-width: 100%; overflow: hidden; container-type: inline-size; border-radius: 2px 5px 5px 2px; flex: 0 0 auto;
+  box-shadow: 3px 2px 0 -1px #F7F0DF, 5px 3px 0 -1px #E3D7BE, 7px 4px 0 -1px #F7F0DF, 0 18px 28px -14px rgba(40,30,15,0.65); transform: rotate(-2deg); }
+.cover::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,0.35) 0, rgba(0,0,0,0.08) 5%, rgba(255,255,255,0.18) 6.5%, rgba(255,255,255,0) 10%, rgba(0,0,0,0) 92%, rgba(0,0,0,0.12) 100%); }
+.cover-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cover-title { position: absolute; left: 8%; right: 8%; top: 11%; margin: 0; text-align: center; font-family: var(--display); font-weight: 400; color: #F4ECD8;
+  font-size: 15cqw; line-height: 1.02; letter-spacing: -0.01em; text-shadow: 0 0.4cqw 1.6cqw rgba(8,28,26,0.45); }
+html[lang="hi"] .cover-title { line-height: 1.22; letter-spacing: 0; top: 10.5%; }
+.cover-rule { position: absolute; left: 50%; top: 34.5%; width: 16%; transform: translateX(-50%); border-top: max(1px, 0.5cqw) solid var(--gold); }
+.cover-rule::after { content: ""; position: absolute; left: 50%; top: 0; width: 2.2cqw; height: 2.2cqw; background: var(--gold); transform: translate(-50%, -50%) translateY(-0.25cqw) rotate(45deg); }
+html[lang="hi"] .cover-rule { top: 37%; }
+.cover-author { position: absolute; left: 0; right: 0; bottom: 4.2%; margin: 0; text-align: center; font-family: var(--body); font-weight: 500; font-size: 4.6cqw;
+  letter-spacing: 0.16em; text-transform: uppercase; color: #F7EFDC; text-shadow: 0 1px 2px rgba(80,30,15,0.45); }
+html[lang="hi"] .cover-author { font-size: 5cqw; letter-spacing: 0.04em; }
+.files { display: grid; gap: 6px; }
+.files span { font-size: 0.82rem; border: 1px solid var(--line); border-radius: 4px; padding: 3px 9px; background: #FFFFFF; }
+.also { max-width: var(--measure); margin: clamp(48px, 6vw, 60px) auto 0; display: grid; gap: 10px; color: var(--muted); text-align: center; }
+
+.letter { max-width: 38rem; margin: 0 auto; background-color: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: clamp(24px, 5vw, 44px);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 41px, #E8DFCB 41px 42px); background-position: 0 18px; }
+.letter ul { list-style: none; padding: 0; margin: 0; }
+.letter li { font-family: var(--hand); color: var(--pen); font-size: clamp(1.15rem, 1rem + 0.6vw, 1.4rem); line-height: 42px; padding-left: 32px; position: relative; }
+.letter li::before { content: ""; position: absolute; left: 4px; top: 14px; width: 12px; height: 7px; border-left: 2.5px solid var(--ok); border-bottom: 2.5px solid var(--ok); transform: rotate(-45deg); }
+.letter .sign { margin-top: 10px; font-family: var(--hand); color: var(--ink); font-size: 1.2rem; line-height: 42px; text-align: right; }
+
+.colophon { max-width: 30rem; margin: 0 auto; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.colophon .ed { font-family: var(--display); font-style: italic; color: var(--gold-ink); font-size: var(--t-md); }
+.colophon h2 { font-size: var(--t-lg); line-height: 1.2; }
+html[lang="hi"] .colophon h2 { line-height: 1.45; }
+.colophon .lim { color: var(--ribbon); font-weight: 600; font-size: var(--t-sm); }
+.colophon .perks { font-family: var(--display); font-size: var(--t-md); line-height: 1.6; }
+.colophon .small { font-size: var(--t-sm); color: var(--muted); max-width: 26rem; }
+.colophon .copy { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; margin-top: 8px; width: 100%; }
+
+.faq { max-width: var(--measure); margin: 0 auto; }
+.faq details { border-bottom: 1px solid var(--line); padding-block: 16px; }
+.faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; font-weight: 600; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--gold-ink); font-family: var(--display); font-size: 1.5rem; line-height: 1; }
+.faq details[open] summary::after { content: "\2212"; }
+.faq details p { margin-top: 8px; color: var(--muted); }
+
+/* back cover: the closed book again, seen from the back, lying on the desk */
+.back { padding-block: clamp(64px, 9vw, 110px) max(28px, env(safe-area-inset-bottom, 0px)); }
+.back-book { position: relative; max-width: 760px; margin: 0 auto; text-align: center; display: grid; gap: 26px; justify-items: center;
+  padding: clamp(48px, 8vw, 88px) clamp(28px, 6vw, 72px) clamp(32px, 5vw, 48px) clamp(24px, 5vw, 64px);
+  border-radius: 12px 4px 4px 12px;
+  background-image: linear-gradient(270deg, rgba(0,0,0,0.32) 0, rgba(0,0,0,0.18) 16px, rgba(205,174,106,0.55) 16px, rgba(205,174,106,0.55) 17px, rgba(0,0,0,0.16) 17px, transparent 22px),
+    radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,0.07), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 4px);
+  box-shadow: -3px 2px 0 -1px #F7F0DF, -5px 3px 0 -1px #E3D7BE, -7px 4px 0 -1px #F7F0DF, -9px 5px 0 -1px #DCCFB4,
+    0 40px 60px -36px rgba(45,35,20,0.6); }
+.back-book::before { content: ""; position: absolute; inset: 14px 32px 14px 14px; border: 1px solid rgba(205,174,106,0.45); border-radius: 2px; pointer-events: none; }
+.back-book > * { position: relative; }
+.back h2 { font-size: var(--t-xl); line-height: 1.08; max-width: 13em; }
+html[lang="hi"] .back h2 { line-height: 1.32; }
+.price { display: flex; align-items: center; gap: 16px; padding: 10px 14px; background: var(--sheet); color: var(--ink); border-radius: 3px; }
+.price .bars { width: 92px; height: 40px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 8px, var(--ink) 8px 11px, transparent 11px 12px); }
+.price span { font-weight: 700; font-size: var(--t-sm); }
+.site-foot { max-width: 760px; margin: 28px auto 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; font-size: var(--t-sm); color: var(--desk-ink); }
+.site-foot a { color: var(--cloth); }
+</style>
+<!--PREVIEW-HEAD-END-->
+</head>
+<body>
+<!--PREVIEW-BODY-START-->
+<header class="desk hero-desk gutter">
+  <div class="shell desk-top">
+    <a class="brand" href="#" aria-label="Dictationer">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#183C39"/><rect x="16" y="8" width="8" height="17" rx="4" fill="#EFE4CB"/><path d="M11 20a9 9 0 0018 0M20 29v5" fill="none" stroke="#EFE4CB" stroke-width="2"/></svg>
+      <span data-brand>Dictationer</span>
+    </a>
+    <div class="prefs">
+    <div class="lang">
+      <label for="site-country" data-i18n="country_label">Country</label>
+      <select id="site-country">
+        <option value="IN" data-i18n="c_IN">India</option>
+        <option value="US" data-i18n="c_US">USA</option>
+        <option value="GB" data-i18n="c_GB">UK</option>
+        <option value="CA" data-i18n="c_CA">Canada</option>
+        <option value="AE" data-i18n="c_AE">UAE</option>
+        <option value="SG" data-i18n="c_SG">Singapore</option>
+        <option value="AU" data-i18n="c_AU">Australia</option>
+        <option value="OT" data-i18n="c_OT">Another country</option>
+      </select>
+    </div>
+    <div class="lang">
+      <label for="site-lang" data-i18n="lang_label">Language</label>
+      <select id="site-lang">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी</option>
+        <option disabled data-i18n="lang_soon">More languages soon</option>
+      </select>
+    </div>
+    </div>
+  </div>
+
+  <div class="shell spread">
+    <div class="pages">
+      <div class="title-block">
+        <p class="kicker" data-i18n="kicker">The First Edition</p>
+        <h1 id="headline" data-i18n="h1">Your book, in your own voice.</h1>
+        <p class="sub" data-i18n="hero_sub">Speak in Hindi or English. Every word stays yours: we fix only spelling and punctuation. Then proofread, pick a cover, and get it ready for print.</p>
+        <div class="demo-video" id="demo-video" hidden>
+          <button type="button" class="watch" id="watch-btn"><span class="watch-icon" aria-hidden="true">▶</span><span data-i18n="watch">Watch it work</span></button>
+        </div>
+      </div>
+
+      <div class="sheet-wrap">
+        <div class="sheet play" id="nb" role="img" aria-label="Example: spoken words written down exactly">
+          <span class="note" style="top:26px" data-i18n="nb_speak">You speak</span>
+          <div class="wave" aria-hidden="true"></div>
+          <span class="note" style="top:86px" data-i18n="nb_ink">It writes</span>
+          <p class="spoken"><span data-i18n="nb_s1">my nani had a neem tree in her courtyard</span><span data-i18n="nb_s2">and every summer evening the stories started there</span></p>
+          <p class="typeset"><span data-i18n="nb_typeset">My nani had a neem tree in her courtyard, and every summer evening the stories started there.</span><small data-i18n="nb_caption">Your exact words. Only the punctuation was added.</small></p>
+          <p class="next-line" aria-hidden="true"><span data-i18n="nb_next">and your next sentence goes here</span><i></i></p>
+        </div>
+        <span class="page-no" style="right:52px" data-folio-page="2">2</span>
+      </div>
+
+      <div id="join" class="bookplate">
+        <p class="exl" data-i18n="exl">Ex libris</p>
+        <form id="wl-step1" class="stack" novalidate>
+          <h2 data-i18n="bp_h">Join the First Edition list</h2>
+          <div class="pair">
+            <div class="field">
+              <label for="email" data-i18n="f_email">Your email</label>
+              <input id="email" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com">
+            </div>
+            <div class="field">
+              <label for="language" data-i18n="f_writes">I write in</label>
+              <select class="in" id="language" name="language" required>
+                <option value="hindi">हिन्दी</option>
+                <option value="english" selected>English</option>
+                <option value="marathi">मराठी</option>
+                <option value="bengali">বাংলা</option>
+                <option value="tamil">தமிழ்</option>
+                <option value="telugu">తెలుగు</option>
+                <option value="gujarati">ગુજરાતી</option>
+                <option value="kannada">ಕನ್ನಡ</option>
+                <option value="malayalam">മലയാളം</option>
+                <option value="urdu">اردو</option>
+                <option value="punjabi">ਪੰਜਾਬੀ</option>
+                <option value="other" data-i18n="lang_other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" id="other-row" hidden>
+            <label for="language_other" data-i18n="f_other">Which language?</label>
+            <input id="language_other" name="language_other" type="text" maxlength="40">
+          </div>
+          <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+          <label class="check"><input id="consent" name="consent" type="checkbox" required><span data-i18n-html="f_consent">I'm 18+ and agree to the <a href="privacy.html?lang=en" target="_blank" rel="noopener">privacy notice</a>.</span></label>
+          <label class="check"><input id="marketing" name="marketing" type="checkbox"><span data-i18n="f_marketing">Also send me occasional writing tips (optional).</span></label>
+          <button class="btn" type="submit" id="submit1" data-i18n="f_submit">Reserve my First Edition place</button>
+          <p class="fine" data-i18n="f_free">Free to start. No card needed.</p>
+          <p class="msg" id="msg1" role="alert" aria-live="polite"></p>
+          <p class="demo" id="demo-note" hidden data-i18n="demo_note">Preview mode: signups aren't saved here.</p>
+        </form>
+
+        <div id="wl-done" class="welcome" hidden tabindex="-1">
+          <h2 data-i18n="ty_h">Welcome, First Edition writer.</h2>
+          <p class="pos"><span data-i18n="ty_pos_a">You're on page</span> <b id="pos-n">214</b> <span data-i18n="ty_pos_b">of our list.</span></p>
+          <form id="wl-plan" class="plans" novalidate>
+            <fieldset>
+              <legend><span class="plan-q" data-i18n="plan_h">One question: at launch, which plan would you pick?</span><span class="plan-note" data-i18n="plan_sub">Nothing is charged now. First Edition writers keep this price for life.</span></legend>
+              <label class="plan"><input type="radio" name="plan" value="0" data-tier="free"><span class="plan-card"><span class="plan-head"><b data-i18n="pf_n"></b><span class="plan-price" data-i18n="pf_p"></span></span><span class="plan-for" data-i18n="pf_for"></span><ul><li data-i18n="pf_1"></li><li data-i18n="pf_2"></li><li data-i18n="pf_3"></li><li data-i18n="pf_4"></li></ul></span></label>
+              <label class="plan"><input type="radio" name="plan" value="699" data-tier="writer"><span class="plan-card"><span class="plan-head"><b data-i18n="pw_n"></b><span class="plan-price" data-i18n="pw_p"></span></span><span class="plan-for" data-i18n="pw_for"></span><ul><li data-i18n="pw_1"></li><li data-i18n="pw_2"></li><li data-i18n="pw_3"></li><li data-i18n="pw_4"></li><li data-i18n="pw_5"></li></ul></span></label>
+              <label class="plan"><input type="radio" name="plan" value="1499" data-tier="author"><span class="plan-card"><span class="plan-head"><b data-i18n="pa_n"></b><span class="plan-price" data-i18n="pa_p"></span></span><span class="plan-for" data-i18n="pa_for"></span><ul><li data-i18n="pa_1"></li><li data-i18n="pa_2"></li><li data-i18n="pa_3"></li><li data-i18n="pa_4"></li></ul></span></label>
+            </fieldset>
+            <p class="plan-anchor" data-i18n="plan_anchor">50,000 words is about 200 pages. Freelance proofreading at ₹10–15 a page would cost ₹2,000–3,000.</p>
+            <button class="btn" type="submit" id="plan-save" data-i18n="plan_save">Save my choice</button>
+            <p class="msg" id="msg-plan" role="status" aria-live="polite"></p>
+          </form>
+          <p class="plan-done" id="plan-done" hidden></p>
+          <p class="fine" data-i18n="ty_ref">Every co-writer you invite moves you 10 pages closer to the front.</p>
+          <p class="refcount" id="ref-count" hidden></p>
+          <div class="share">
+            <a class="btn" id="share-wa" href="#" target="_blank" rel="noopener" data-i18n="ty_wa">Invite a co-writer on WhatsApp</a>
+            <div class="share-row">
+              <button class="btn ghost" type="button" id="share-copy" data-i18n="ty_copy">Copy link</button>
+              <button class="btn ghost" type="button" id="share-native" data-i18n="ty_share">Share</button>
+            </div>
+            <input class="reflink" id="ref-link" type="text" readonly>
+          </div>
+          <div class="rewards">
+            <span><b>3</b><span data-i18n="rw3">co-writers lock founding pricing</span></span>
+            <span><b>5</b><span data-i18n="rw5">co-writers unlock 3 free covers</span></span>
+            <span><b>10</b><span data-i18n="rw10">co-writers unlock 3 months of the Author plan</span></span>
+          </div>
+          <a class="btn ghost" id="reserve" href="#" target="_blank" rel="noopener" hidden data-i18n="ty_reserve">Reserve your founding spot for ₹99 (fully refundable)</a>
+          <button class="toggle" type="button" id="p-open" aria-expanded="false" aria-controls="wl-step2" data-i18n="p_open">Tell us about your book (30 seconds)</button>
+
+          <form id="wl-step2" class="profile" novalidate hidden>
+            <p class="fine" style="text-align:left" data-i18n="p_sub">All optional. It decides what we build first.</p>
+            <div class="field">
+              <label for="p-name" data-i18n="p_name">Your name</label>
+              <input id="p-name" name="name" type="text" autocomplete="name" maxlength="60">
+            </div>
+            <fieldset class="chips">
+              <legend data-i18n="p_what">What do you write?</legend>
+              <label><input type="checkbox" name="write_types" value="novel"><span data-i18n="wt_novel">Novel</span></label>
+              <label><input type="checkbox" name="write_types" value="short_stories"><span data-i18n="wt_stories">Short stories</span></label>
+              <label><input type="checkbox" name="write_types" value="memoir"><span data-i18n="wt_memoir">Memoir</span></label>
+              <label><input type="checkbox" name="write_types" value="poetry"><span data-i18n="wt_poetry">Poetry</span></label>
+              <label><input type="checkbox" name="write_types" value="non_fiction"><span data-i18n="wt_nonfic">Non-fiction</span></label>
+              <label><input type="checkbox" name="write_types" value="screenplay"><span data-i18n="wt_screen">Screenplay or audio series</span></label>
+            </fieldset>
+            <fieldset class="chips">
+              <legend data-i18n="p_stage">Where is your book right now?</legend>
+              <label><input type="radio" name="stage" value="idea"><span data-i18n="st_idea">Just an idea</span></label>
+              <label><input type="radio" name="stage" value="drafting"><span data-i18n="st_draft">Writing it</span></label>
+              <label><input type="radio" name="stage" value="finished"><span data-i18n="st_done">Manuscript finished</span></label>
+              <label><input type="radio" name="stage" value="published"><span data-i18n="st_pub">Already published</span></label>
+            </fieldset>
+            <div class="field">
+              <label for="p-block" data-i18n="p_block">What stops you most?</label>
+              <select class="in" id="p-block" name="blocker">
+                <option value="" data-i18n="opt_choose">Choose one</option>
+                <option value="typing" data-i18n="bl_typing">Typing is slow</option>
+                <option value="finishing" data-i18n="bl_finish">I start but don't finish</option>
+                <option value="editing" data-i18n="bl_edit">Editing and proofreading</option>
+                <option value="cover_format" data-i18n="bl_cover">Cover and formatting</option>
+                <option value="publishing" data-i18n="bl_pub">I don't know how to publish</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="p-more" data-i18n="p_more">Anything else about your book? (optional)</label>
+              <textarea id="p-more" name="more" rows="2" maxlength="400"></textarea>
+            </div>
+            <div class="field">
+              <label for="p-wa" data-i18n="p_wa">WhatsApp number, for the launch-day message only (optional)</label>
+              <input id="p-wa" name="whatsapp" type="tel" autocomplete="tel" inputmode="tel" placeholder="+91 98xxxxxxxx">
+            </div>
+            
+            <button class="btn" type="submit" id="submit2" data-i18n="p_save">Save my answers</button>
+            <p class="msg" id="msg2" role="status" aria-live="polite"></p>
+          </form>
+          <p class="fine" id="p-thanks" hidden data-i18n="p_done">Thank you. We're building this around writers like you.</p>
+          <button class="reset" type="button" id="reset" data-i18n="ty_reset">Not you? Join with a different email</button>
+        </div>
+      </div>
+    </div>
+    <div class="ribbon" aria-hidden="true"></div>
+  </div>
+</header>
+
+<main>
+  <section class="chapter gutter">
+    <div class="opener"><p class="label" data-i18n="c1">Chapter one</p><h2 data-i18n="c1_h">The story is already in you</h2><div class="fleuron" aria-hidden="true"></div></div>
+    <div class="measure">
+      <p class="prose dropcap" data-i18n="c1_p">You could tell it at dinner, word for word. It stops when you sit down to type.</p>
+      <ul class="pains">
+        <li data-i18n="pain_1">Hindi typing on a phone takes forever.</li>
+        <li data-i18n="pain_2">The draft stalls at chapter three.</li>
+        <li data-i18n="pain_3">Proofreading and a cover cost thousands more.</li>
+      </ul>
+    </div>
+    <p class="folio" data-folio="1">1</p>
+  </section>
+
+  <section class="chapter gutter">
+    <div class="opener"><p class="label" data-i18n="c2">Chapter two</p><h2 data-i18n="how_h">From your voice to a printed book</h2><div class="fleuron" aria-hidden="true"></div></div>
+    <ol class="steps measure">
+      <li><span class="n" data-num="1">1</span><b data-i18n="s1_t">Speak</b><span class="d" data-i18n="s1_d">Tell it the way you'd tell a friend.</span></li>
+      <li><span class="n" data-num="2">2</span><b data-i18n="s2_t">Shape</b><span class="d" data-i18n="s2_d">Change any scene just by saying what to change.</span></li>
+      <li><span class="n" data-num="3">3</span><b data-i18n="s3_t">Polish</b><span class="d" data-i18n="s3_d">Proofreading is included.</span></li>
+      <li><span class="n" data-num="4">4</span><b data-i18n="s4_t">Dress it</b><span class="d" data-i18n="s4_d">Choose from many covers.</span></li>
+      <li><span class="n" data-num="5">5</span><b data-i18n="s5_t">Print</b><span class="d" data-i18n="s5_d">PDF and EPUB ready for Amazon KDP, Notion Press and Pothi.</span></li>
+    </ol>
+    <p class="folio" data-folio="2">2</p>
+  </section>
+
+  <section class="chapter gutter">
+    <div class="opener"><p class="label" data-i18n="c3">Chapter three</p><h2 data-i18n="feat_h">With you from the first line to the last page</h2><div class="fleuron" aria-hidden="true"></div></div>
+    <div class="exhibits">
+      <div class="exhibit">
+        <div class="plate" role="img" aria-label="Example of a voice edit">
+          <p class="cmd" data-i18n="cmd">Fix the railway station scene. Raj should arrive late.</p>
+          <p class="scene"><span data-i18n="sc_pre">Raj </span><del data-i18n="sc_del">reached the platform early</del> <ins data-i18n="sc_ins">ran onto the platform just as the train began to move</ins><span data-i18n="sc_post">, the letter still in his pocket.</span></p>
+          <div class="decide" aria-hidden="true"><span data-i18n="keep">Keep mine</span><span class="yes" data-i18n="accept">Accept change</span></div>
+        </div>
+        <h3 data-i18n="f1_t">Edit by voice</h3>
+        <p data-i18n="f1_d">No scrolling through 200 pages. Say what to change and where; it finds the scene and shows you the edit before anything changes.</p>
+      </div>
+      <div class="exhibit">
+        <div class="plate" role="img" aria-label="Example lap: an idea captured at night">
+          <div class="slip"><span class="t" data-i18n="slip_t">Lap, 2:14 am</span><span class="i" data-i18n="slip_i">What if the villain is her own brother?</span><span class="c" data-i18n="slip_c">For chapter 7</span></div>
+        </div>
+        <h3 data-i18n="f2_t">Laps</h3>
+        <p data-i18n="f2_d">An idea on a walk, or at 2 a.m.? Tap and say it. It's saved as a lap and shows up beside your page when you write that chapter, so no idea is ever lost.</p>
+      </div>
+      <div class="exhibit">
+        <div class="plate" role="img" aria-label="Example printed book and files">
+          <div class="book"><div class="cover"><img class="cover-art" src="assets/cover-neem.svg" alt="" width="600" height="900" loading="lazy" decoding="async"><h3 class="cover-title"><span data-i18n="bk_t1">The Neem</span><br><span data-i18n="bk_t2">Tree</span></h3><span class="cover-rule" aria-hidden="true"></span><p class="cover-author" data-i18n="bk_a">Your name</p></div><div class="files"><span data-i18n="file_pdf">Print-ready PDF</span><span>EPUB</span></div></div>
+        </div>
+        <h3 data-i18n="f3_t">Ready for the press</h3>
+        <p data-i18n="f3_d">The day you finish, your book is ready to publish, formatted for print and e-book.</p>
+      </div>
+    </div>
+    <div class="also">
+      <p data-i18n="also_1">Every draft is kept. Go back to any version and see exactly what changed.</p>
+      <p data-i18n="also_2">Prefer typing? Typing is free, always.</p>
+    </div>
+    <p class="folio" data-folio="3">3</p>
+  </section>
+
+  <section class="chapter gutter">
+    <div class="opener"><p class="label" data-i18n="c4">Chapter four</p><h2 data-i18n="tr_h">Your words. Your voice. Your copyright.</h2><div class="fleuron" aria-hidden="true"></div></div>
+    <div class="letter">
+      <ul>
+        <li data-i18n="tr_1">We never write your story.</li>
+        <li data-i18n="tr_2">Nothing changes without your yes.</li>
+        <li data-i18n="tr_3">Your recordings are private. Delete them anytime.</li>
+        <li data-i18n="tr_4">We never train AI on your book.</li>
+      </ul>
+      <p class="sign" data-i18n="tr_sign">Signed, the Dictationer team</p>
+    </div>
+    <p class="folio" data-folio="4">4</p>
+  </section>
+
+  <section class="chapter gutter">
+    <div class="colophon">
+      <p class="ed" data-i18n="of_ed">First Edition, 2026</p>
+      <h2 data-i18n="of_h">Become a First Edition writer</h2>
+      <div class="fleuron" aria-hidden="true"></div>
+      <p class="lim" data-i18n="of_lim">Limited to the first 500 writers</p>
+      <p class="perks"><span data-i18n="of_1">Founding price, locked for life</span><br><span data-i18n="of_2">3 covers free</span></p>
+      <p class="small" data-i18n="of_3">Free to start. Paid plans from ₹699 a month, with proofreading worth over ₹2,000 included.</p>
+      <a class="btn" href="#join" data-jump data-i18n="f_submit">Reserve my First Edition place</a>
+      <p class="copy" data-i18n="of_copy">© 2026 Your name. All rights remain with the author.</p>
+    </div>
+  </section>
+
+  <section class="chapter gutter">
+    <div class="opener"><p class="label" data-i18n="c5">Notes at the back</p><h2 data-i18n="faq_h">Questions writers ask</h2><div class="fleuron" aria-hidden="true"></div></div>
+    <div class="faq">
+      <details><summary data-i18n="q1">Will the AI change my story?</summary><p data-i18n="a1">No. It writes down what you say, fixes spelling and punctuation, and suggests edits only when you ask. You approve every change.</p></details>
+      <details><summary data-i18n="q2">Which languages?</summary><p data-i18n="a2">Hindi and English at launch, including mixing the two in one sentence. Tell us the language you write in when you join; it decides which language comes next.</p></details>
+      <details><summary data-i18n="q3">Can I publish on Amazon or Notion Press?</summary><p data-i18n="a3">Yes. You get a print-ready PDF and an EPUB. If you use a generated cover on Amazon KDP, Amazon asks you to disclose it, and we'll show you how.</p></details>
+      <details><summary data-i18n="q4">Is my voice data safe?</summary><p data-i18n="a4">Your recordings are private, you can delete them anytime, and they are never used to train AI.</p></details>
+      <details><summary data-i18n="q5">When does it launch?</summary><p data-i18n="a5">First Edition writers get access first. We'll message you before anyone else.</p></details>
+    </div>
+  </section>
+</main>
+
+<section class="desk back gutter">
+  <div class="back-book cloth">
+    <h2 class="foil" data-i18n="cl_h">Every book begins with one sentence. Say yours.</h2>
+    <a class="btn foil-btn" href="#join" data-jump data-i18n="f_submit">Reserve my First Edition place</a>
+    <div class="price" aria-hidden="true"><div class="bars"></div><span data-i18n="price">Free to start</span></div>
+  </div>
+  <footer class="site-foot">
+    <span data-i18n="ft_made">Made in Bengaluru for Indian writers.</span>
+    <a id="privacy-link" href="privacy.html?lang=en" data-i18n="ft_privacy">Privacy notice</a>
+  </footer>
+</section>
+
+<script>
+(() => {
+  /* ---------- CONFIG ---------- */
+  const CONFIG = {
+    BRAND: { en: 'Dictationer', hi: 'डिक्टेशनर' },
+    API: '/api',          // served by the Worker in this project (worker.js)
+    SITE_URL: 'https://www.dictationer.net/',         // e.g. 'https://dictationer.in/' for share links; blank = this site
+    RESERVE_URL: '',      // Razorpay / UPI payment link for the ₹99 reserve; blank hides it
+    UMAMI_ID: '',         // optional Umami website ID
+    // Demo video per page language: paste a YouTube link (youtu.be/…, watch?v=…, shorts/…) or the 11-character ID.
+    // Leave both blank to hide the button.
+    VIDEO: { en: 'https://youtu.be/Cq5NBH1Rs4E', hi: 'https://youtu.be/Cq5NBH1Rs4E' }
+  };
+  // Preview mode anywhere the Worker isn't serving the page (file://, artifact preview, plain static server)
+  const DEMO = !/^https?:$/.test(location.protocol) || /claude|claudeusercontent|localhost:8765/.test(location.host);
+
+  const T = {
+    en: {
+      title: '{brand} First Edition',
+      desc: 'Speak your book in Hindi or English. Every word stays yours. Proofreading, covers and print-ready files included.',
+      lang_label: 'Language', lang_soon: 'More languages soon', country_label: 'Country',
+      c_IN: 'India', c_US: 'USA', c_GB: 'UK', c_CA: 'Canada', c_AE: 'UAE', c_SG: 'Singapore', c_AU: 'Australia', c_OT: 'Another country',
+      h1: 'Your book, in your own voice.', h1_b: 'Vyasa spoke. Ganesha wrote it down. Now it\'s your turn.',
+      h1_c: 'Dostoevsky dictated a whole novel in 26 days. Now it\'s your turn.',
+      watch: 'Watch it work', watch_label: 'Demo video',
+      kicker: 'The First Edition',
+      hero_sub: 'Speak in Hindi or English. Every word stays yours: we fix only spelling and punctuation. Then proofread, pick a cover, and get it ready for print.',
+      exl: 'Ex libris', bp_h: 'Join the First Edition list',
+      f_email: 'Your email', f_writes: 'I write in', lang_other: 'Other', f_other: 'Which language?',
+      f_consent: 'I\'m 18+ and agree to the <a href="privacy.html?lang=en" target="_blank" rel="noopener">privacy notice</a>.',
+      f_marketing: 'Also send me occasional writing tips (optional).',
+      f_submit: 'Reserve my First Edition place', f_free: 'Free to start. No card needed.', sending: 'Reserving…',
+      err_email: 'Enter a valid email address, like name@gmail.com.',
+      err_consent: 'Tick the first box to confirm you\'re 18+ and agree to the privacy notice.',
+      err_generic: 'That didn\'t go through. Check your connection and try again.',
+      err_dup: 'This email is already on the First Edition list. Open this page on the device you joined from to see your invite link.',
+      demo_note: 'Preview mode: signups aren\'t saved here.',
+      ty_h: 'Welcome, First Edition writer.', ty_pos_a: 'You\'re on page', ty_pos_b: 'of our list.',
+      ty_ref: 'Every co-writer you invite moves you 10 pages closer to the front.',
+      ref_n1: 'co-writer has joined with your link.', ref_nn: 'co-writers have joined with your link.',
+      ty_wa: 'Invite a co-writer on WhatsApp', ty_copy: 'Copy link', ty_copied: 'Copied', ty_share: 'Share',
+      wa_text: 'I\'m writing my book by speaking it, in my own words. Join me on the First Edition list: ',
+      rw3: 'co-writers lock founding pricing', rw5: 'co-writers unlock 3 free covers', rw10: 'co-writers unlock 3 months of the Author plan',
+      ty_reserve: 'Reserve your founding spot for ₹99 (fully refundable)', ty_reset: 'Not you? Join with a different email',
+      plan_h: 'One question: at launch, which plan would you pick?', plan_sub: 'Nothing is charged now. First Edition writers keep this price for life.',
+      pf_n: 'Free', pf_p: '{free}', pf_for: 'To try it out',
+      pf_1: 'Write and edit by typing', pf_2: 'Capture ideas as text laps', pf_3: 'Export your book', pf_4: '15 voice minutes, once, to try speaking',
+      pw_n: 'Writer', pw_p: '{writer} a month', pw_for: 'To write one book steadily',
+      pw_1: '180 voice minutes a month (about 20,000 spoken words)', pw_2: 'Proofreading for 50,000 words a month (about 200 pages)',
+      pw_3: '5 cover generations a month', pw_4: 'Edit by voice and capture voice laps', pw_5: 'Everything in Free',
+      pa_n: 'Author', pa_p: '{author} a month', pa_for: 'For long books, or more than one',
+      pa_1: '600 voice minutes a month (about 70,000 spoken words)', pa_2: 'Proofreading for 150,000 words a month (about 600 pages)',
+      pa_3: '15 cover generations a month', pa_4: 'Everything in Writer',
+      plan_anchor: '50,000 words is about 200 pages. Freelance proofreading at ₹10–15 a page would cost ₹2,000–3,000.',
+      plan_anchor_usd: '50,000 words is about 200 pages of a typical book.',
+      plan_save: 'Save my choice', plan_saving: 'Saving…', plan_pick: 'Pick one of the three plans first.',
+      plan_done_free: 'Saved: Free. You can move to a paid plan any time after launch.',
+      plan_done_writer: 'Saved: Writer at {writer} a month. As a First Edition writer, this price is yours for life.',
+      plan_done_author: 'Saved: Author at {author} a month. As a First Edition writer, this price is yours for life.',
+      p_open: 'Tell us about your book (30 seconds)', p_sub: 'All optional. It decides what we build first.',
+      p_name: 'Your name', p_what: 'What do you write?',
+      wt_novel: 'Novel', wt_stories: 'Short stories', wt_memoir: 'Memoir', wt_poetry: 'Poetry', wt_nonfic: 'Non-fiction', wt_screen: 'Screenplay or audio series',
+      p_stage: 'Where is your book right now?', st_idea: 'Just an idea', st_draft: 'Writing it', st_done: 'Manuscript finished', st_pub: 'Already published',
+      p_block: 'What stops you most?', opt_choose: 'Choose one', bl_typing: 'Typing is slow', bl_finish: 'I start but don\'t finish',
+      bl_edit: 'Editing and proofreading', bl_cover: 'Cover and formatting', bl_pub: 'I don\'t know how to publish',
+      p_more: 'Anything else about your book? (optional)',
+      p_plan: 'At launch, which would you choose?', pl_free: 'Free only', pl_699: '₹699 a month', pl_pass: '₹2,999 once, for 6 months', pl_1499: '₹1,499 a month, more voice time',
+      p_wa: 'WhatsApp number, for the launch-day message only (optional)',
+      p_save: 'Save my answers', p_saving: 'Saving…', p_done: 'Thank you. We\'re building this around writers like you.',
+      nb_speak: 'You speak', nb_ink: 'It writes',
+      nb_s1: 'my nani had a neem tree in her courtyard', nb_s2: 'and every summer evening the stories started there',
+      nb_typeset: 'My nani had a neem tree in her courtyard, and every summer evening the stories started there.',
+      nb_caption: 'Your exact words. Only the punctuation was added.', nb_next: 'and your next sentence goes here', nb_label: 'Example: spoken words written down exactly',
+      c1: 'Chapter one', c1_h: 'The story is already in you',
+      c1_p: 'You could tell it at dinner, word for word. It stops when you sit down to type.',
+      pain_1: 'Hindi typing on a phone takes forever.', pain_2: 'The draft stalls at chapter three.', pain_3: 'Proofreading and a cover cost thousands more.',
+      c2: 'Chapter two', how_h: 'From your voice to a printed book',
+      s1_t: 'Speak', s1_d: 'Tell it the way you\'d tell a friend.', s2_t: 'Shape', s2_d: 'Change any scene just by saying what to change.',
+      s3_t: 'Polish', s3_d: 'Proofreading is included.', s4_t: 'Dress it', s4_d: 'Choose from many covers.',
+      s5_t: 'Print', s5_d: 'PDF and EPUB ready for Amazon KDP, Notion Press and Pothi.',
+      c3: 'Chapter three', feat_h: 'With you from the first line to the last page',
+      cmd: 'Fix the railway station scene. Raj should arrive late.',
+      sc_pre: 'Raj ', sc_del: 'reached the platform early', sc_ins: 'ran onto the platform just as the train began to move', sc_post: ', the letter still in his pocket.',
+      keep: 'Keep mine', accept: 'Accept change',
+      f1_t: 'Edit by voice', f1_d: 'No scrolling through 200 pages. Say what to change and where; it finds the scene and shows you the edit before anything changes.',
+      slip_t: 'Lap, 2:14 am', slip_i: 'What if the villain is her own brother?', slip_c: 'For chapter 7',
+      f2_t: 'Laps', f2_d: 'An idea on a walk, or at 2 a.m.? Tap and say it. It\'s saved as a lap and shows up beside your page when you write that chapter, so no idea is ever lost.',
+      bk_t1: 'The Neem', bk_t2: 'Tree', bk_a: 'Your name', file_pdf: 'Print-ready PDF',
+      f3_t: 'Ready for the press', f3_d: 'The day you finish, your book is ready to publish, formatted for print and e-book.',
+      also_1: 'Every draft is kept. Go back to any version and see exactly what changed.', also_2: 'Prefer typing? Typing is free, always.',
+      c4: 'Chapter four', tr_h: 'Your words. Your voice. Your copyright.',
+      tr_1: 'We never write your story.', tr_2: 'Nothing changes without your yes.',
+      tr_3: 'Your recordings are private. Delete them anytime.', tr_4: 'We never train AI on your book.', tr_sign: 'Signed, the {brand} team',
+      of_ed: 'First Edition, 2026', of_h: 'Become a First Edition writer', of_lim: 'Limited to the first 500 writers',
+      of_1: 'Founding price, locked for life', of_2: '3 covers free',
+      of_3: 'Free to start. Paid plans from ₹699 a month, with proofreading worth over ₹2,000 included.',
+      of_3_usd: 'Free to start. Paid plans from {writer} a month, with proofreading included.',
+      of_copy: '© 2026 Your name. All rights remain with the author.',
+      c5: 'Notes at the back', faq_h: 'Questions writers ask',
+      q1: 'Will the AI change my story?', a1: 'No. It writes down what you say, fixes spelling and punctuation, and suggests edits only when you ask. You approve every change.',
+      q2: 'Which languages?', a2: 'Hindi and English at launch, including mixing the two in one sentence. Tell us the language you write in when you join; it decides which language comes next.',
+      q3: 'Can I publish on Amazon or Notion Press?', a3: 'Yes. You get a print-ready PDF and an EPUB. If you use a generated cover on Amazon KDP, Amazon asks you to disclose it, and we\'ll show you how.',
+      q4: 'Is my voice data safe?', a4: 'Your recordings are private, you can delete them anytime, and they are never used to train AI.',
+      q5: 'When does it launch?', a5: 'First Edition writers get access first. We\'ll message you before anyone else.',
+      cl_h: 'Every book begins with one sentence. Say yours.', price: 'Free to start',
+      ft_made: 'Made in Bengaluru for Indian writers.', ft_privacy: 'Privacy notice', ref_label: 'Your referral link'
+    },
+    hi: {
+      title: '{brand} फ़र्स्ट एडिशन',
+      desc: 'हिंदी या अंग्रेज़ी में बोलकर अपनी किताब लिखिए। हर शब्द आपका। प्रूफ़रीडिंग, कवर और छपने लायक फ़ाइल शामिल।',
+      lang_label: 'भाषा', lang_soon: 'और भाषाएँ जल्द', country_label: 'देश',
+      c_IN: 'भारत', c_US: 'अमेरिका', c_GB: 'ब्रिटेन', c_CA: 'कनाडा', c_AE: 'यूएई', c_SG: 'सिंगापुर', c_AU: 'ऑस्ट्रेलिया', c_OT: 'कोई और देश',
+      kicker: 'फ़र्स्ट एडिशन',
+      h1: 'आपकी आवाज़, आपके शब्द, आपकी किताब।', h1_b: 'व्यास बोले, गणेश ने लिखा। अब आपकी बारी।',
+      h1_c: 'दॉस्तोयेव्स्की ने पूरा उपन्यास 26 दिन में बोलकर लिखवाया। अब आपकी बारी।',
+      watch: 'देखिए कैसे काम करता है', watch_label: 'डेमो वीडियो',
+      hero_sub: 'हिंदी या अंग्रेज़ी में बोलिए। हर शब्द आपका रहेगा, हम सिर्फ़ वर्तनी और विराम ठीक करते हैं। फिर प्रूफ़रीडिंग, कवर और छपने लायक फ़ाइल, सब एक जगह।',
+      exl: 'आपकी प्रति', bp_h: 'फ़र्स्ट एडिशन सूची में जुड़िए',
+      f_email: 'आपका ईमेल', f_writes: 'मैं इस भाषा में लिखता/लिखती हूँ', lang_other: 'अन्य', f_other: 'कौन-सी भाषा?',
+      f_consent: 'मेरी आयु 18+ है और मैं <a href="privacy.html?lang=hi" target="_blank" rel="noopener">गोपनीयता सूचना</a> से सहमत हूँ।',
+      f_marketing: 'मुझे कभी-कभी लेखन से जुड़ी सलाह भी भेजें (वैकल्पिक)।',
+      f_submit: 'मेरी फ़र्स्ट एडिशन जगह पक्की करें', f_free: 'शुरुआत मुफ़्त। कोई कार्ड नहीं।', sending: 'पक्का कर रहे हैं…',
+      err_email: 'सही ईमेल लिखिए, जैसे name@gmail.com',
+      err_consent: 'आगे बढ़ने के लिए पहला बॉक्स चुनिए: आयु 18+ और गोपनीयता सूचना से सहमति।',
+      err_generic: 'जुड़ नहीं पाया। इंटरनेट जाँचकर फिर कोशिश कीजिए।',
+      err_dup: 'यह ईमेल पहले से फ़र्स्ट एडिशन सूची में है। अपना आमंत्रण लिंक देखने के लिए यह पेज उसी फ़ोन या कंप्यूटर पर खोलिए जिससे आप जुड़े थे।',
+      demo_note: 'प्रीव्यू मोड: यहाँ साइनअप सेव नहीं होते।',
+      ty_h: 'स्वागत है, फ़र्स्ट एडिशन लेखक।', ty_pos_a: 'आप हमारी सूची के पन्ना', ty_pos_b: 'पर हैं।',
+      ty_ref: 'हर साथी लेखक जिसे आप बुलाएँ, आपको 10 पन्ने आगे ले आता है।',
+      ref_n1: 'साथी लेखक आपके लिंक से जुड़ चुके हैं।', ref_nn: 'साथी लेखक आपके लिंक से जुड़ चुके हैं।',
+      ty_wa: 'WhatsApp पर साथी लेखक को बुलाइए', ty_copy: 'लिंक कॉपी करें', ty_copied: 'कॉपी हो गया', ty_share: 'शेयर करें',
+      wa_text: 'मैं अपनी किताब बोलकर लिख रहा/रही हूँ, अपने ही शब्दों में। आप भी फ़र्स्ट एडिशन सूची में जुड़िए: ',
+      rw3: 'साथी लेखक: संस्थापक कीमत पक्की', rw5: 'साथी लेखक: 3 कवर मुफ़्त', rw10: 'साथी लेखक: 3 महीने Author प्लान मुफ़्त',
+      ty_reserve: '₹99 में अपनी संस्थापक जगह पक्की कीजिए (पूरा पैसा वापसी योग्य)', ty_reset: 'आप नहीं? दूसरे ईमेल से जुड़िए',
+      plan_h: 'एक सवाल: लॉन्च पर आप कौन-सा प्लान चुनेंगे?', plan_sub: 'अभी कोई पैसा नहीं लिया जाएगा। फ़र्स्ट एडिशन लेखकों के लिए यह कीमत हमेशा के लिए पक्की।',
+      pf_n: 'मुफ़्त', pf_p: '{free}', pf_for: 'आज़माने के लिए',
+      pf_1: 'टाइप करके लिखिए और बदलिए', pf_2: 'विचार टेक्स्ट लैप में सहेजिए', pf_3: 'अपनी किताब एक्सपोर्ट कीजिए', pf_4: 'बोलकर लिखने के 15 मिनट, एक बार आज़माने को',
+      pw_n: 'राइटर', pw_p: '{writer} महीना', pw_for: 'एक किताब लगातार लिखने के लिए',
+      pw_1: 'हर महीने 180 मिनट बोलकर लिखना (लगभग 20,000 शब्द)', pw_2: 'हर महीने 50,000 शब्दों की प्रूफ़रीडिंग (लगभग 200 पन्ने)',
+      pw_3: 'हर महीने 5 बार कवर बनाइए', pw_4: 'बोलकर एडिट कीजिए, बोलकर लैप बनाइए', pw_5: 'मुफ़्त प्लान की सारी सुविधाएँ',
+      pa_n: 'ऑथर', pa_p: '{author} महीना', pa_for: 'लंबी किताब या एक से ज़्यादा किताबों के लिए',
+      pa_1: 'हर महीने 600 मिनट बोलकर लिखना (लगभग 70,000 शब्द)', pa_2: 'हर महीने 1,50,000 शब्दों की प्रूफ़रीडिंग (लगभग 600 पन्ने)',
+      pa_3: 'हर महीने 15 बार कवर बनाइए', pa_4: 'राइटर प्लान की सारी सुविधाएँ',
+      plan_anchor_usd: '50,000 शब्द यानी किसी आम किताब के लगभग 200 पन्ने।',
+      plan_anchor: '50,000 शब्द यानी लगभग 200 पन्ने। ₹10–15 प्रति पन्ना के हिसाब से बाहर प्रूफ़रीडिंग पर ₹2,000–3,000 लगते।',
+      plan_save: 'मेरी पसंद सेव करें', plan_saving: 'सेव हो रहा है…', plan_pick: 'पहले तीन में से एक प्लान चुनिए।',
+      plan_done_free: 'सेव हो गया: मुफ़्त। लॉन्च के बाद कभी भी पेड प्लान ले सकते हैं।',
+      plan_done_writer: 'सेव हो गया: राइटर, {writer} महीना। फ़र्स्ट एडिशन लेखक के रूप में यह कीमत हमेशा आपकी।',
+      plan_done_author: 'सेव हो गया: ऑथर, {author} महीना। फ़र्स्ट एडिशन लेखक के रूप में यह कीमत हमेशा आपकी।',
+      p_open: 'अपनी किताब के बारे में बताइए (30 सेकंड)', p_sub: 'सब वैकल्पिक। इसी से तय होगा कि हम पहले क्या बनाएँ।',
+      p_name: 'आपका नाम', p_what: 'आप क्या लिखते हैं?',
+      wt_novel: 'उपन्यास', wt_stories: 'कहानियाँ', wt_memoir: 'संस्मरण / आत्मकथा', wt_poetry: 'कविता', wt_nonfic: 'नॉन-फ़िक्शन', wt_screen: 'स्क्रिप्ट या ऑडियो सीरीज़',
+      p_stage: 'आपकी किताब अभी कहाँ है?', st_idea: 'बस एक विचार', st_draft: 'लिख रहे हैं', st_done: 'पांडुलिपि पूरी', st_pub: 'छप चुकी है',
+      p_block: 'सबसे बड़ी रुकावट क्या है?', opt_choose: 'एक चुनिए', bl_typing: 'टाइपिंग धीमी है', bl_finish: 'शुरू करता/करती हूँ, पूरा नहीं होता',
+      bl_edit: 'एडिटिंग और प्रूफ़रीडिंग', bl_cover: 'कवर और फ़ॉर्मैटिंग', bl_pub: 'छपवाना कैसे है, पता नहीं',
+      p_more: 'अपनी किताब के बारे में कुछ और? (वैकल्पिक)',
+      p_plan: 'लॉन्च पर आप क्या चुनेंगे?', pl_free: 'सिर्फ़ मुफ़्त', pl_699: '₹699 महीना', pl_pass: '₹2,999 एक बार, 6 महीने के लिए', pl_1499: '₹1,499 महीना, ज़्यादा वॉइस समय',
+      p_wa: 'WhatsApp नंबर, सिर्फ़ लॉन्च वाले दिन के संदेश के लिए (वैकल्पिक)',
+      p_save: 'जवाब सेव करें', p_saving: 'सेव हो रहा है…', p_done: 'धन्यवाद। हम इसे आप जैसे लेखकों के लिए बना रहे हैं।',
+      nb_speak: 'आप बोलें', nb_ink: 'वो लिखे',
+      nb_s1: 'नानी के आँगन में नीम का पेड़ था', nb_s2: 'और हर गर्मी की शाम वहीं कहानियाँ शुरू होती थीं',
+      nb_typeset: 'नानी के आँगन में नीम का पेड़ था, और हर गर्मी की शाम वहीं कहानियाँ शुरू होती थीं।',
+      nb_caption: 'आपके ही शब्द। बस विराम चिह्न जोड़े गए।', nb_next: 'और यहाँ आपका अगला वाक्य', nb_label: 'उदाहरण: बोले गए शब्द, हूबहू लिखे हुए',
+      c1: 'अध्याय एक', c1_h: 'कहानी आपके भीतर पहले से है',
+      c1_p: 'खाने की मेज़ पर आप उसे शब्दशः सुना देते हैं। रुकती है तो बस टाइप करते वक़्त।',
+      pain_1: 'मोबाइल पर हिंदी टाइप करने में घंटों लगते हैं।', pain_2: 'ड्राफ़्ट तीसरे अध्याय पर अटक जाता है।', pain_3: 'प्रूफ़रीडिंग और कवर पर हज़ारों का अलग खर्च।',
+      c2: 'अध्याय दो', how_h: 'आपकी आवाज़ से छपी किताब तक',
+      s1_t: 'बोलिए', s1_d: 'जैसे किसी दोस्त को सुना रहे हों।', s2_t: 'सँवारिए', s2_d: 'कोई भी सीन बदलना हो, बस बोलकर बताइए।',
+      s3_t: 'निखारिए', s3_d: 'प्रूफ़रीडिंग शामिल है।', s4_t: 'सजाइए', s4_d: 'कई कवर में से अपना चुनिए।',
+      s5_t: 'छपवाइए', s5_d: 'Amazon KDP, Notion Press और Pothi के लिए तैयार PDF और EPUB।',
+      c3: 'अध्याय तीन', feat_h: 'पहली पंक्ति से आख़िरी पन्ने तक, हर कदम पर साथ',
+      cmd: 'स्टेशन वाला सीन ठीक करो, राज देर से पहुँचे।',
+      sc_pre: 'राज ', sc_del: 'समय से पहले प्लेटफ़ॉर्म पर पहुँच गया', sc_ins: 'ठीक तब प्लेटफ़ॉर्म पर दौड़ता हुआ पहुँचा जब ट्रेन चलने लगी', sc_post: ', चिट्ठी अब भी उसकी जेब में थी।',
+      keep: 'मेरा रखें', accept: 'बदलाव मंज़ूर',
+      f1_t: 'बोलकर बदलिए', f1_d: '200 पन्ने खंगालने की ज़रूरत नहीं। बताइए क्या और कहाँ बदलना है, वो सीन ढूँढकर बदलाव पहले आपको दिखाएगा।',
+      slip_t: 'लैप, रात 2:14', slip_i: 'क्या विलेन असल में उसका अपना भाई है?', slip_c: 'अध्याय 7 के लिए',
+      f2_t: 'लैप्स', f2_d: 'टहलते हुए या रात 2 बजे कोई ख़याल आया? टैप कीजिए और बोल दीजिए। वो एक लैप बनकर सहेज जाता है और जब आप वो अध्याय लिखेंगे, आपके पन्ने के पास दिखेगा। कोई विचार छूटेगा नहीं।',
+      bk_t1: 'नीम का', bk_t2: 'पेड़', bk_a: 'आपका नाम', file_pdf: 'छपने लायक PDF',
+      f3_t: 'छपने को तैयार', f3_d: 'जिस दिन किताब पूरी, उसी दिन छपने को तैयार, प्रिंट और ई-बुक दोनों के लिए।',
+      also_1: 'हर ड्राफ़्ट सुरक्षित रहता है। किसी भी पुराने रूप पर लौटिए और देखिए क्या बदला।', also_2: 'टाइप करना पसंद है? टाइपिंग हमेशा मुफ़्त है।',
+      c4: 'अध्याय चार', tr_h: 'शब्द आपके। आवाज़ आपकी। कॉपीराइट आपका।',
+      tr_1: 'हम आपकी कहानी नहीं लिखते।', tr_2: 'आपकी हाँ के बिना कुछ नहीं बदलता।',
+      tr_3: 'आपकी रिकॉर्डिंग निजी है। जब चाहें मिटा दें।', tr_4: 'आपकी किताब पर हम AI नहीं सिखाते।', tr_sign: '— {brand} टीम',
+      of_ed: 'फ़र्स्ट एडिशन, 2026', of_h: 'फ़र्स्ट एडिशन लेखक बनिए', of_lim: 'सिर्फ़ पहले 500 लेखकों के लिए',
+      of_1: 'संस्थापक कीमत, हमेशा के लिए', of_2: '3 कवर मुफ़्त',
+      of_3_usd: 'शुरुआत मुफ़्त। पेड प्लान {writer} महीना से, प्रूफ़रीडिंग शामिल।',
+      of_3: 'शुरुआत मुफ़्त। पेड प्लान ₹699 महीना से, जिसमें ₹2,000 से ज़्यादा की प्रूफ़रीडिंग शामिल है।',
+      of_copy: '© 2026 आपका नाम। सारे अधिकार लेखक के पास।',
+      c5: 'आख़िरी पन्ने', faq_h: 'लेखक अक्सर पूछते हैं',
+      q1: 'क्या AI मेरी कहानी बदल देगा?', a1: 'नहीं। आप जो बोलते हैं वही लिखा जाता है, बस वर्तनी और विराम ठीक होते हैं। सुझाव तभी मिलते हैं जब आप माँगें, और हर बदलाव आपकी मंज़ूरी से होता है।',
+      q2: 'कौन-सी भाषाएँ?', a2: 'लॉन्च पर हिंदी और अंग्रेज़ी, एक ही वाक्य में दोनों मिलाकर भी। जुड़ते समय अपनी लेखन-भाषा बताइए, उसी से तय होगा कि अगली भाषा कौन-सी होगी।',
+      q3: 'क्या मैं Amazon या Notion Press पर छपवा सकता/सकती हूँ?', a3: 'हाँ। आपको छपने लायक PDF और EPUB मिलेगा। Amazon KDP पर बनाया गया कवर इस्तेमाल करें तो Amazon उसकी जानकारी माँगता है, हम उसका तरीका बताएँगे।',
+      q4: 'क्या मेरी आवाज़ का डेटा सुरक्षित है?', a4: 'आपकी रिकॉर्डिंग निजी है, आप उसे कभी भी मिटा सकते हैं, और उससे AI नहीं सिखाया जाता।',
+      q5: 'लॉन्च कब होगा?', a5: 'फ़र्स्ट एडिशन लेखकों को सबसे पहले मौका मिलेगा। हम आपको सबसे पहले संदेश भेजेंगे।',
+      cl_h: 'हर किताब एक वाक्य से शुरू होती है। अपना बोलिए।', price: 'शुरुआत मुफ़्त',
+      ft_made: 'बेंगलुरु में, भारतीय लेखकों के लिए बनाया गया।', ft_privacy: 'गोपनीयता सूचना', ref_label: 'आपका रेफ़रल लिंक'
+    }
+  };
+  const DEV = ['०','१','२','३','४','५','६','७','८','९'];
+  const toDev = s => String(s).replace(/\d/g, d => DEV[+d]);
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  let qs; try { qs = new URLSearchParams(location.search); } catch (e) { qs = new URLSearchParams(); }
+  const KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'ref'];
+  let attr = {}; try { attr = JSON.parse(store.get('wl_attr') || '{}'); } catch (e) {}
+  if (!attr.ts || Date.now() - attr.ts > 30 * 864e5) attr = { ts: Date.now() };
+  KEYS.forEach(k => { const v = qs.get(k); if (v && !attr[k]) attr[k] = v.slice(0, 100); });
+  if (!attr.referrer) attr.referrer = (document.referrer || '').slice(0, 200);
+  if (!attr.landing) attr.landing = (location.pathname || '/') + (qs.get('lang') ? '?lang=' + qs.get('lang') : '');
+  store.set('wl_attr', JSON.stringify(attr));
+
+  let variant = store.get('wl_variant');
+  if (variant !== 'A' && variant !== 'B') { variant = Math.random() < 0.5 ? 'A' : 'B'; store.set('wl_variant', variant); }
+  // Preview switch for the owner: ?v=A / ?v=B (B = Vyasa in India, Dostoevsky elsewhere), or #vyasa, shows that headline for this visit only (nothing is stored)
+  const forced = (qs.get('v') || '').toUpperCase();
+  if (forced === 'A' || forced === 'B') variant = forced;
+  else if (/^#vyasa$/i.test(location.hash || '')) variant = 'B';
+  const device = /iPad|Tablet/i.test(navigator.userAgent) ? 'tablet' : /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+  const t0 = Date.now();
+  if (CONFIG.UMAMI_ID) { const s = document.createElement('script'); s.defer = true; s.src = 'https://cloud.umami.is/script.js'; s.setAttribute('data-website-id', CONFIG.UMAMI_ID); document.head.appendChild(s); }
+  const track = (n, p) => { try { window.umami && window.umami.track(n, p); } catch (e) {} };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  let lang = qs.get('lang');
+  if (lang !== 'en' && lang !== 'hi') lang = store.get('wl_lang');
+  if (lang !== 'en' && lang !== 'hi') lang = (navigator.language || '').toLowerCase().startsWith('hi') ? 'hi' : 'en';
+  let writingTouched = false;
+  let session = null; try { session = JSON.parse(store.get('wl_session') || 'null'); } catch (e) {}
+  // Country decides the currency: India pays in rupees, everyone else in US dollars
+  const COUNTRIES = ['IN', 'US', 'GB', 'CA', 'AE', 'SG', 'AU', 'OT'];
+  const PRICES = {
+    INR: { free: '₹0', writer: '₹699', author: '₹1,499', values: { free: '0', writer: '699', author: '1499' } },
+    USD: { free: '$0', writer: '$15', author: '$29', values: { free: '0', writer: 'usd_15', author: 'usd_29' } }
+  };
+  const PLAN_INFO = { '0': ['free', 'INR'], '699': ['writer', 'INR'], '1499': ['author', 'INR'], 'usd_15': ['writer', 'USD'], 'usd_29': ['author', 'USD'] };
+  let country = (qs.get('country') || '').toUpperCase();
+  let countryKnown = COUNTRIES.includes(country);
+  if (!countryKnown) { country = store.get('wl_country'); countryKnown = COUNTRIES.includes(country); }
+  if (!countryKnown) country = 'IN';                      // until /api/geo answers
+  const currency = () => (country === 'IN' ? 'INR' : 'USD');
+  const fill = (str, cur) => String(str).replace(/\{brand\}/g, CONFIG.BRAND[lang] || CONFIG.BRAND.en)
+    .replace(/\{(free|writer|author)\}/g, (_, t) => PRICES[cur || currency()][t]);
+  const tr = (k, cur) => {
+    const usd = (cur || currency()) === 'USD';
+    const pick = key => (T[lang] && T[lang][key] != null) ? T[lang][key] : T.en[key];
+    const v = (usd && pick(k + '_usd') != null) ? pick(k + '_usd') : pick(k);
+    return v == null ? '' : fill(v, cur);
+  };
+  function applyCountry(next, user) {
+    country = COUNTRIES.includes(next) ? next : 'OT';
+    $('#site-country').value = country;
+    const vals = PRICES[currency()].values;
+    $$('#wl-plan input[name="plan"]').forEach(el => { el.value = vals[el.dataset.tier]; });
+    applyLang(lang, false);            // re-render all copy with the new prices
+    if (user) { store.set('wl_country', country); track('country_switch', { country }); }
+  }
+
+  // the waveform keeps talking for as long as the page is open
+  const wave = $('.wave');
+  for (let i = 0; i < 36; i++) {
+    const b = document.createElement('i');
+    b.style.height = (24 + Math.round(Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.45)) * 76)) + '%';
+    b.style.animationDelay = (-(i % 9) * 0.11) + 's';
+    b.style.animationDuration = (0.7 + (i % 5) * 0.09) + 's';
+    wave.appendChild(b);
+  }
+
+  function applyLang(next, user) {
+    lang = next;
+    document.documentElement.lang = lang;
+    $('#site-lang').value = lang;
+    $$('[data-i18n]').forEach(el => { const v = tr(el.dataset.i18n); if (v) el.textContent = v; });
+    $$('[data-i18n-html]').forEach(el => { el.innerHTML = tr(el.dataset.i18nHtml); });
+    $$('[data-brand]').forEach(el => { el.textContent = CONFIG.BRAND[lang] || CONFIG.BRAND.en; });
+    $$('[data-num]').forEach(el => { el.textContent = lang === 'hi' ? toDev(el.dataset.num) : el.dataset.num; });
+    $$('[data-folio]').forEach(el => { const n = el.dataset.folio; el.textContent = '— ' + (lang === 'hi' ? toDev(n) : n) + ' —'; });
+    $$('[data-folio-page]').forEach(el => { const n = el.dataset.folioPage; el.textContent = lang === 'hi' ? toDev(n) : n; });
+    $('#headline').textContent = variant === 'B' ? tr(country === 'IN' ? 'h1_b' : 'h1_c') : tr('h1');
+    $('#nb').setAttribute('aria-label', tr('nb_label'));
+    $('#ref-link').setAttribute('aria-label', tr('ref_label'));
+    $('#privacy-link').href = 'privacy.html?lang=' + lang;
+    document.title = tr('title');
+    const md = document.querySelector('meta[name="description"]'); if (md) md.setAttribute('content', tr('desc'));
+    if (!writingTouched) $('#language').value = lang === 'hi' ? 'hindi' : 'english';
+    if (session) { renderShare(); if (typeof renderPlan === 'function') renderPlan(); }
+    const nb = $('#nb'); nb.classList.remove('play'); void nb.offsetWidth; nb.classList.add('play');
+    if (user) {
+      store.set('wl_lang', lang);
+      try { const u = new URL(location.href); u.searchParams.set('lang', lang); history.replaceState(null, '', u); } catch (e) {}
+      track('lang_switch', { lang });
+    }
+  }
+
+  const f1 = $('#wl-step1'), f2 = $('#wl-step2'), done = $('#wl-done'), msg1 = $('#msg1'), msg2 = $('#msg2');
+  if (DEMO) $('#demo-note').hidden = false;
+  $('#language').addEventListener('change', e => { writingTouched = true; $('#other-row').hidden = e.target.value !== 'other'; });
+  f1.addEventListener('focusin', () => track('form_start', { lang }), { once: true });
+  $$('[data-jump]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    $('#join').scrollIntoView({ block: 'center' });
+    setTimeout(() => (session ? $('#share-wa') : $('#email')).focus({ preventScroll: true }), 450);
+  }));
+
+  async function post(path, data) {
+    if (DEMO) { await new Promise(r => setTimeout(r, 450)); return path === '/join' ? { ok: true, ref_code: 'DEMO42', token: 'demo', position: 214 } : { ok: true }; }
+    const res = await fetch(CONFIG.API + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+    return res.json();
+  }
+
+  f1.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#submit1'); if (btn.disabled) return;
+    msg1.textContent = '';
+    const email = $('#email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg1.textContent = tr('err_email'); $('#email').focus(); return; }
+    if (!$('#consent').checked) { msg1.textContent = tr('err_consent'); $('#consent').focus(); return; }
+    btn.disabled = true; btn.textContent = tr('sending');
+    const data = {
+      email, language: $('#language').value, language_other: $('#language_other').value || '',
+      consent: true, marketing: $('#marketing').checked, consent_version: 'v2-2026-10',
+      website: $('#website').value || '', elapsed_ms: Date.now() - t0,
+      utm_source: attr.utm_source || '', utm_medium: attr.utm_medium || '', utm_campaign: attr.utm_campaign || '',
+      utm_content: attr.utm_content || '', utm_term: attr.utm_term || '', ref: attr.ref || '',
+      referrer: attr.referrer || '', landing: attr.landing || '', variant: lang + '-' + (variant === 'B' && country !== 'IN' ? 'C' : variant), page_lang: lang, device, chosen_country: country
+    };
+    try {
+      const r = await post('/join', data);
+      if (!r || !r.ok) throw new Error((r && r.error) || 'error');
+      if (r.dup) { msg1.textContent = tr('err_dup'); return; }
+      session = { email, token: r.token || '', ref_code: r.ref_code, position: r.position };
+      store.set('wl_session', JSON.stringify(session));
+      track('signup_step1', { lang, writing: data.language, source: data.utm_source || 'direct', variant: data.variant, dup: !!r.dup });
+      showDone(true);
+    } catch (err) {
+      msg1.textContent = err.message === 'invalid_email' ? tr('err_email') : err.message === 'consent_required' ? tr('err_consent') : tr('err_generic');
+    } finally { btn.disabled = false; btn.textContent = tr('f_submit'); }
+  });
+
+  function shareLink() {
+    const base = CONFIG.SITE_URL || (!DEMO ? location.origin + '/' : 'https://dictationer.workers.dev/');
+    return base + '?lang=' + lang + '&ref=' + encodeURIComponent(session.ref_code) + '&utm_source=referral&utm_medium=share';
+  }
+  function renderShare() {
+    const link = shareLink();
+    $('#pos-n').textContent = String(session.position || 1);
+    const n = session.referrals || 0, rc = $('#ref-count');
+    rc.hidden = n < 1; rc.textContent = n + ' ' + tr(n === 1 ? 'ref_n1' : 'ref_nn');
+    $$('.rewards > span').forEach((el, i) => el.classList.toggle('got', n >= [3, 5, 10][i]));
+    $('#ref-link').value = link;
+    $('#share-wa').href = 'https://wa.me/?text=' + encodeURIComponent(tr('wa_text') + link);
+    if (CONFIG.RESERVE_URL && currency() === 'INR') { const rv = $('#reserve'); rv.hidden = false; rv.href = CONFIG.RESERVE_URL + (CONFIG.RESERVE_URL.includes('?') ? '&' : '?') + 'ref=' + encodeURIComponent(session.ref_code); }
+  }
+  function showDone(focus) {
+    f1.hidden = true; done.hidden = false; renderShare(); renderPlan();
+    $('#p-open').hidden = !session.token;
+    if (focus) done.focus();
+  }
+  $('#share-wa').addEventListener('click', () => track('referral_whatsapp', { lang }));
+  $('#reserve').addEventListener('click', () => track('reserve_click', { lang }));
+  $('#share-copy').addEventListener('click', async () => {
+    const input = $('#ref-link'), btn = $('#share-copy');
+    try { await navigator.clipboard.writeText(input.value); btn.textContent = tr('ty_copied'); } catch (e) { input.focus(); input.select(); }
+    track('referral_copy', { lang });
+    setTimeout(() => { btn.textContent = tr('ty_copy'); }, 2000);
+  });
+  const nativeBtn = $('#share-native');
+  if (navigator.share) nativeBtn.addEventListener('click', () => navigator.share({ text: tr('wa_text'), url: $('#ref-link').value }).catch(() => {}));
+  else { nativeBtn.hidden = true; $('.share-row').style.gridTemplateColumns = '1fr'; }
+  const fPlan = $('#wl-plan'), msgPlan = $('#msg-plan');
+  function renderPlan() {
+    const done = session && session.plan != null;
+    fPlan.hidden = done || !session || !session.token;
+    $('#plan-done').hidden = !done;
+    if (done) { const info = PLAN_INFO[session.plan] || ['free', currency()]; $('#plan-done').textContent = tr('plan_done_' + info[0], info[1]); }
+  }
+  fPlan.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#plan-save'); if (btn.disabled || !session) return;
+    const picked = (fPlan.querySelector('input[name="plan"]:checked') || {}).value;
+    if (!picked) { msgPlan.textContent = tr('plan_pick'); return; }
+    btn.disabled = true; btn.textContent = tr('plan_saving'); msgPlan.textContent = '';
+    try {
+      const r = await post('/plan', { email: session.email, token: session.token, plan: picked });
+      if (!r || !r.ok) throw new Error((r && r.error) || 'error');
+      session.plan = picked; store.set('wl_session', JSON.stringify(session));
+      track('plan_pick', { lang, plan: picked });
+      renderPlan();
+    } catch (err) { msgPlan.textContent = tr('err_generic'); }
+    finally { btn.disabled = false; btn.textContent = tr('plan_save'); }
+  });
+  fPlan.addEventListener('change', () => { msgPlan.textContent = ''; });
+  $('#p-open').addEventListener('click', () => {
+    const open = f2.hidden; f2.hidden = !open; $('#p-open').setAttribute('aria-expanded', String(open));
+    if (open) { $('#p-name').focus(); track('profile_open', { lang }); }
+  });
+  $('#reset').addEventListener('click', () => {
+    store.del('wl_session'); session = null; fPlan.reset(); $('#plan-done').hidden = true; msgPlan.textContent = '';
+    done.hidden = true; f1.hidden = false; f1.reset(); f2.reset(); f2.hidden = true; $('#p-thanks').hidden = true; msg2.textContent = '';
+    $('#p-open').setAttribute('aria-expanded', 'false');
+    writingTouched = false; $('#language').value = lang === 'hi' ? 'hindi' : 'english'; $('#other-row').hidden = true;
+    $('#email').focus();
+  });
+  f2.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#submit2'); if (btn.disabled || !session) return;
+    btn.disabled = true; btn.textContent = tr('p_saving'); msg2.textContent = '';
+    const fd = new FormData(f2);
+    const data = {
+      email: session.email, token: session.token, name: fd.get('name') || '', write_types: fd.getAll('write_types').join(','),
+      stage: fd.get('stage') || '', wtp: fd.get('wtp') || '', blocker: fd.get('blocker') || '',
+      notes: (fd.get('more') || '').trim(), whatsapp: (fd.get('whatsapp') || '').trim()
+    };
+    try {
+      const r = await post('/profile', data);
+      if (!r || !r.ok) throw new Error((r && r.error) || 'error');
+      track('signup_step2', { lang, wtp: data.wtp, stage: data.stage, blocker: data.blocker });
+      f2.hidden = true; $('#p-open').hidden = true; $('#p-thanks').hidden = false;
+    } catch (err) { msg2.textContent = tr('err_generic'); }
+    finally { btn.disabled = false; btn.textContent = tr('p_save'); }
+  });
+
+  $('#site-lang').addEventListener('change', e => { if (e.target.value === 'en' || e.target.value === 'hi') applyLang(e.target.value, true); });
+  $('#site-country').addEventListener('change', e => applyCountry(e.target.value, true));
+  const ytId = u => { const v = String(u || '').trim(); const m = v.match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{11})/); return m ? m[1] : (/^[\w-]{11}$/.test(v) ? v : ''); };
+  const videoFor = () => ytId((CONFIG.VIDEO || {})[lang]) || ytId((CONFIG.VIDEO || {}).en);
+  if (videoFor()) $('#demo-video').hidden = false;
+  $('#watch-btn').addEventListener('click', () => {
+    const id = videoFor(); if (!id) return;
+    $('#demo-video').innerHTML = '<div class="yt-frame"><iframe src="https://www.youtube-nocookie.com/embed/' + id +
+      '?autoplay=1&rel=0&playsinline=1&modestbranding=1" title="' + tr('watch_label') + '" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
+    track('video_play', { lang, country });
+  });
+  applyLang(lang, false);
+  applyCountry(country, false);
+  if (!countryKnown && !DEMO) {
+    fetch(CONFIG.API + '/geo').then(r => r.json()).then(g => { if (g && g.country) applyCountry(COUNTRIES.includes(g.country) ? g.country : 'OT', false); }).catch(() => {});
+  }
+  if (session && session.ref_code) showDone(false);
+  // the place in line changes as co-writers join, so ask the server for today's number
+  if (session && session.token && !DEMO) {
+    post('/me', { email: session.email, token: session.token }).then(r => {
+      if (!r || !r.ok) return;
+      session.position = r.position; session.referrals = r.referrals;
+      store.set('wl_session', JSON.stringify(session)); renderShare();
+    }).catch(() => {});
+  }
+})();
+</script>
+<!--PREVIEW-BODY-END-->
+</body>
+</html>

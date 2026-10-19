@@ -1,4 +1,4 @@
-.env
+# Python
 .venv/
 __pycache__/
 *.pyc
@@ -6,5 +6,25 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Node / Cloudflare (FE/Landing) — any depth
+node_modules/
+.wrangler/
+
+# OS / editor
+.DS_Store
+*.log
+
+# App data (dictated chapters)
+data/
+
+# Local only
 notes/
 tests/
+features/

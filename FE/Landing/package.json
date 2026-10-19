@@ -1,0 +1,11 @@
+{
+  "name": "dictationer-waitlist",
+  "private": true,
+  "scripts": {
+    "db:init": "wrangler d1 execute dictationer-waitlist --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute dictationer-waitlist --local --file=./schema.sql",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "^4.40.0" }
+}

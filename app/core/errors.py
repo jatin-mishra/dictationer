@@ -13,6 +13,7 @@ class AppError(Exception):
 
     status_code = 500
     code = "internal_error"
+    headers: dict[str, str] | None = None
 
     def __init__(self, message: str, *, status_code: int | None = None, code: str | None = None):
         super().__init__(message)
@@ -28,16 +29,19 @@ class NotFoundError(AppError):
     code = "not_found"
 
 
-def _envelope(status_code: int, code: str, message: str) -> JSONResponse:
+def _envelope(
+    status_code: int, code: str, message: str, headers: dict[str, str] | None = None
+) -> JSONResponse:
     return JSONResponse(
         status_code=status_code,
         content={"error": {"code": code, "message": message, "request_id": request_id_ctx.get()}},
+        headers=headers,
     )
 
 
 async def app_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, AppError)
-    return _envelope(exc.status_code, exc.code, exc.message)
+    return _envelope(exc.status_code, exc.code, exc.message, exc.headers)
 
 
 async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:

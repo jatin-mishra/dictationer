@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "FastAPI service"
 requires-python = ">=3.12"
 dependencies = [
+    "av>=19.0.1",
     "fastapi[standard]>=0.115",
     "faster-whisper>=1.2.1",
+    "httpx>=0.28.1",
+    "mlx-whisper>=0.4.3",
     "numpy>=2.5.4",
     "pydantic-settings>=2.6",
+    "python-multipart>=0.0.32",
     "pyttsx3>=2.99",
     "requests>=2.34.2",
     "sounddevice>=0.5.6",
@@ -19,6 +23,7 @@ dev = [
     "httpx2>=0.1",
     "ruff>=0.8",
     "mypy>=1.13",
+    "respx>=0.23.1",
 ]
 
 [tool.ruff]
@@ -32,6 +37,11 @@ select = ["E", "F", "I", "B", "UP", "ASYNC"]
 strict = true
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = ["mlx_whisper"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["slow: needs the real MLX Whisper model (deselect with -m 'not slow')"]

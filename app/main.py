@@ -1,7 +1,9 @@
 import logging
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +12,12 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.middleware.request_id import RequestIdMiddleware
+from app.schemas.dictation import Language
+from app.services.idempotency import IdempotencyCache
+from app.services.transcription.mlx_whisper import MlxWhisperTranscriber
+from app.services.transcription.router import TranscriberRouter
+from app.services.transcription.sarvam import SarvamTranscriber
+from app.storage.chapter_store import ChapterStore
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +27,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
     log.info("starting %s (%s)", settings.app_name, settings.environment)
-    yield
+
+    async with httpx.AsyncClient(
+        base_url=settings.sarvam_base_url, timeout=settings.sarvam_timeout_s
+    ) as sarvam_http:
+        sarvam_api_key = os.environ.get("SARVAM_API_KEY", "")
+        sarvam = SarvamTranscriber(sarvam_http, sarvam_api_key, settings.sarvam_model)
+        whisper = MlxWhisperTranscriber(
+            settings.whisper_model_repo, settings.whisper_queue_timeout_s
+        )
+        app.state.transcriber_router = TranscriberRouter(
+            {Language.HI: sarvam, Language.HINGLISH: sarvam, Language.EN: whisper}
+        )
+        app.state.chapter_store = ChapterStore(settings.data_root)
+        app.state.idempotency_cache = IdempotencyCache(settings.idempotency_ttl_s)
+
+        if not sarvam_api_key:
+            log.warning("SARVAM_API_KEY is not set: hi / hinglish dictation will fail")
+        if settings.whisper_preload:
+            await whisper.warm_up()
+        yield
     log.info("shutdown complete")
 
 
@@ -42,6 +69,5 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     app.include_router(api_router)
     return app
-
 
 app = create_app()
