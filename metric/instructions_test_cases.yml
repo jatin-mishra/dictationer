@@ -1,4 +1,4 @@
-# Status: DRAFT — PENDING USER REVIEW.
+# Status: APPROVED 2026-10-19 — FROZEN.
 # Once approved this file is FROZEN; any change needs explicit user review + approval.
 # Design: solutions/instructions_lld.md
 
@@ -100,3 +100,17 @@ test_cases:
   - {id: RL-01, scenario: 10 scripted instructions on a fixture book (hi / en / hinglish), expect: "≥ 8/10 correct after /accept (IM8)"}
   - {id: RL-02, scenario: latency of RL-01 runs, expect: p95 recorded (IM7)}
   - {id: RL-03, scenario: repeat instruction on same chapter within 5 min, expect: cache_read_input_tokens > 0}
+
+# ───────── ADDENDUM 2026-10-19 — user report "action should be remove; add old text to update" ─────────
+# Status: PENDING USER REVIEW. Frozen cases above are unchanged.
+# Note on IM5 / QR-11: for `update`, offsets now cover only the words that differ from new_text
+# (word diff), not necessarily the whole quote; every resolved edit still matches the page text.
+addendum_test_cases:
+  - {id: IR-01, scenario: "reported गोदान page-2 output (3 updates)", expect: "update का परिणाम→की देन (old_text set); update असफलता, अनिश्चितता→संघर्ष, असमंजस; 3rd becomes remove 'वास्तविक '; applied text correct"}
+  - {id: IR-02, scenario: update that only inserts words, expect: action add}
+  - {id: IR-03, scenario: update that only drops words, expect: action remove}
+  - {id: IR-04, scenario: plain update, expect: "old_text == content[from:to]; new_size == len(text)"}
+  - {id: IR-05, scenario: update whose words are unchanged (whitespace only), expect: unresolved no_change}
+  - {id: IR-06, scenario: update to empty text, expect: remove of the quote}
+  - {id: IR-07, scenario: /accept update with old_text, expect: "match → applied; mismatch → 422 invalid_edit; omitted → still accepted (backward compatible)"}
+  - {id: IR-08, scenario: /instructions update in API response, expect: old_text present; /accept of that block succeeds}

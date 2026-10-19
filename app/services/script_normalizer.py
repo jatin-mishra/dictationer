@@ -45,11 +45,16 @@ def _script_warnings(text: str, language: Language) -> list[str]:
     return []
 
 
+def escape_markers(text: str) -> str:
+    """Escape lines that look like `# page N`, so they can't become phantom pages."""
+    return _MARKER_LINE.sub(r"\\#", text)
+
+
 def guard(text: str) -> str:
     """The minimum before text may be stored: reject empty text, escape page-marker lines."""
     if not text.strip():
         raise NoSpeechError("Transcription is empty")
-    return _MARKER_LINE.sub(r"\\#", text)
+    return escape_markers(text)
 
 
 def normalize(text: str, language: Language) -> tuple[str, list[str]]:

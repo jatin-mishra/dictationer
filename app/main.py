@@ -1,9 +1,10 @@
 import logging
 import os
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 import httpx
+from anthropic import AsyncAnthropic
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,6 +15,7 @@ from app.core.logging import configure_logging
 from app.middleware.request_id import RequestIdMiddleware
 from app.schemas.dictation import Language
 from app.services.idempotency import IdempotencyCache
+from app.services.llm import AgentLLM
 from app.services.transcription.mlx_whisper import MlxWhisperTranscriber
 from app.services.transcription.router import TranscriberRouter
 from app.services.transcription.sarvam import SarvamTranscriber
@@ -28,9 +30,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging(settings.log_level)
     log.info("starting %s (%s)", settings.app_name, settings.environment)
 
-    async with httpx.AsyncClient(
-        base_url=settings.sarvam_base_url, timeout=settings.sarvam_timeout_s
-    ) as sarvam_http:
+    async with AsyncExitStack() as stack:
+        sarvam_http = await stack.enter_async_context(
+            httpx.AsyncClient(base_url=settings.sarvam_base_url, timeout=settings.sarvam_timeout_s)
+        )
         sarvam_api_key = os.environ.get("SARVAM_API_KEY", "")
         sarvam = SarvamTranscriber(sarvam_http, sarvam_api_key, settings.sarvam_model)
         whisper = MlxWhisperTranscriber(
@@ -41,6 +44,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         )
         app.state.chapter_store = ChapterStore(settings.data_root)
         app.state.idempotency_cache = IdempotencyCache(settings.idempotency_ttl_s)
+
+        # Secrets from os.environ only. api_key is passed explicitly so the SDK never falls back
+        # to ANTHROPIC_API_KEY or a local login profile.
+        llm_api_key = os.environ.get("ANTHROPIC_AGENT_API_KEY", "")
+        llm_model = os.environ.get("ANTHROPIC_AGENT_MODEL", "")
+        llm_client = None
+        if llm_api_key and llm_model:
+            llm_client = await stack.enter_async_context(
+                AsyncAnthropic(api_key=llm_api_key, timeout=settings.llm_timeout_s, max_retries=2)
+            )
+        else:
+            log.warning(
+                "ANTHROPIC_AGENT_API_KEY / ANTHROPIC_AGENT_MODEL not set: /instructions will fail"
+            )
+        app.state.agent_llm = AgentLLM(llm_client, llm_model, settings.llm_effort)
 
         if not sarvam_api_key:
             log.warning("SARVAM_API_KEY is not set: hi / hinglish dictation will fail")
@@ -69,5 +87,6 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     app.include_router(api_router)
     return app
+
 
 app = create_app()

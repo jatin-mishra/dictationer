@@ -4,6 +4,7 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
 MAX_CHAPTER = 1000
+MAX_PAGE = 10_000
 
 
 def _single_line_nfc(value: str) -> str:

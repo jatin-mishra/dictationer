@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "FastAPI service"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=1.15.0",
     "av>=19.0.1",
     "fastapi[standard]>=0.115",
     "faster-whisper>=1.2.1",
@@ -44,4 +45,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["slow: needs the real MLX Whisper model (deselect with -m 'not slow')"]
+markers = [
+    "slow: needs the real MLX Whisper model (deselect with -m 'not slow')",
+    "llm: calls the real Anthropic API and costs money (opt-in: RUN_LLM_TESTS=1)",
+]

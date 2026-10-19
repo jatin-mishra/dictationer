@@ -10,12 +10,16 @@ from pathlib import Path
 from weakref import WeakValueDictionary
 
 from app.core.errors import AppError, NotFoundError
+from app.schemas.instructions import PageEdits
+from app.services import edit_executor
+from app.services.edit_executor import InvalidEditError
 
 # Lenient on read (`#page 3`, `# Page 3, <hash>`), canonical on write (`# page 3, <hash>`).
 # The stored hash is ignored on read and recomputed on write, so a hand edit can't make it stale.
 _MARKER = re.compile(r"^#\s*page\s+(\d+)(?:\s*,\s*\S*)?\s*$", re.IGNORECASE | re.MULTILINE)
 # Front matter only counts at the very start of the file and with a closing fence.
 _FRONT_MATTER = re.compile(r"\A---\n(.*?)^---[ \t]*(?:\n|\Z)", re.DOTALL | re.MULTILINE)
+_CHAPTER_FILE = re.compile(r"chapter-(\d+)\.md")
 _MAX_NAME_BYTES = 255  # APFS / ext4 file-name limit; Devanagari is 3 bytes per char in UTF-8
 
 
@@ -49,6 +53,11 @@ class ChapterExistsError(AppError):
 
 class PageNotFoundError(NotFoundError):
     code = "page_not_found"
+
+
+class PageChangedError(AppError):
+    status_code = 409
+    code = "page_changed"
 
 
 def slugify(book_name: str) -> str:
@@ -189,6 +198,22 @@ def _birth_time(path: Path) -> datetime:
     return datetime.fromtimestamp(getattr(st, "st_birthtime", st.st_mtime), UTC)
 
 
+def _touch(meta: ChapterMeta | None, path: Path, chapter: int, now: str) -> ChapterMeta:
+    """Set updated_at; a legacy file gets front matter on its first write after the upgrade."""
+    if meta is None:
+        created_at = _utc(_birth_time(path))
+        meta = ChapterMeta(chapter_name=f"Chapter {chapter}", created_at=created_at, updated_at=now)
+    meta.updated_at = now
+    return meta
+
+
+def _read_chapter(path: Path, chapter: int) -> tuple[ChapterMeta | None, str, dict[int, str]]:
+    try:
+        return parse(_read(path))
+    except FileNotFoundError as e:
+        raise ChapterNotFoundError(f"Chapter {chapter} not found") from e
+
+
 class ChapterStore:
     """Books live at {root}/{author_id}/{book_slug}/ with a book.md, and chapters at
     {root}/{author_id}/{book_slug}/chapter-{n}.md.
@@ -265,17 +290,8 @@ class ChapterStore:
 
     @staticmethod
     def _append_sync(path: Path, chapter: int, page: int, text: str, now: str) -> None:
-        try:
-            raw = _read(path)
-        except FileNotFoundError as e:
-            raise ChapterNotFoundError(f"Chapter {chapter} not found") from e
-        meta, preamble, pages = parse(raw)
-        if meta is None:  # legacy file: add front matter on its first write after the upgrade
-            created_at = _utc(_birth_time(path))
-            meta = ChapterMeta(
-                chapter_name=f"Chapter {chapter}", created_at=created_at, updated_at=now
-            )
-        meta.updated_at = now
+        meta, preamble, pages = _read_chapter(path, chapter)
+        meta = _touch(meta, path, chapter, now)
         pages[page] = _join(pages.get(page, ""), text)
         _atomic_write(path, serialize(meta, preamble, pages))
 
@@ -292,3 +308,73 @@ class ChapterStore:
         if page not in pages:
             raise PageNotFoundError(f"Page {page} not found in chapter {chapter}")
         return pages[page], sorted(pages)
+
+    async def read_book(self, author_id: str, book_slug: str) -> dict[int, dict[int, str]]:
+        """{chapter: {page: content}} for every chapter-N.md. No lock: writes are atomic."""
+        folder = self.book_path(author_id, book_slug).parent
+        return await asyncio.to_thread(self._read_book_sync, folder, book_slug)
+
+    @staticmethod
+    def _read_book_sync(folder: Path, book_slug: str) -> dict[int, dict[int, str]]:
+        if not folder.is_dir():
+            raise BookNotFoundError(f"Book '{book_slug}' not found")
+        book: dict[int, dict[int, str]] = {}
+        for path in folder.iterdir():
+            m = _CHAPTER_FILE.fullmatch(path.name)
+            if m is not None and path.is_file():
+                book[int(m.group(1))] = parse(_read(path))[2]
+        return dict(sorted(book.items()))
+
+    async def book_outline(self, author_id: str, book_slug: str) -> dict[int, list[int]]:
+        """{chapter: sorted page numbers}, sorted by chapter."""
+        book = await self.read_book(author_id, book_slug)
+        return {chapter: sorted(pages) for chapter, pages in book.items()}
+
+    async def read_chapter_pages(
+        self, author_id: str, book_slug: str, chapter: int
+    ) -> dict[int, str]:
+        path = self.chapter_path(author_id, book_slug, chapter)
+        return (await asyncio.to_thread(_read_chapter, path, chapter))[2]
+
+    async def apply_edits(
+        self, author_id: str, book_slug: str, chapter: int, page_edits: list[PageEdits]
+    ) -> dict[int, str]:
+        """Apply offset edits to pages of one chapter, all or nothing; returns {page: content}.
+
+        Under the same lock as dictation appends. Every page must still hash to the
+        content_sha256 the edits were computed on, else 409 and nothing is written.
+        """
+        path = self.chapter_path(author_id, book_slug, chapter)
+        async with self._lock_for(path):
+            return await asyncio.to_thread(self._apply_sync, path, chapter, page_edits, self._now())
+
+    @staticmethod
+    def _apply_sync(
+        path: Path, chapter: int, page_edits: list[PageEdits], now: str
+    ) -> dict[int, str]:
+        numbers = [p.page for p in page_edits]
+        if len(set(numbers)) != len(numbers):
+            raise InvalidEditError("each page may appear only once per chapter")
+        meta, preamble, pages = _read_chapter(path, chapter)
+        if missing := [n for n in numbers if n not in pages]:
+            raise PageNotFoundError(f"Pages {missing} not found in chapter {chapter}")
+        if changed := [p.page for p in page_edits if page_hash(pages[p.page]) != p.content_sha256]:
+            raise PageChangedError(f"Pages {changed} changed since the edits were computed")
+
+        edited = dict(pages)
+        for p in page_edits:
+            try:
+                edited[p.page] = edit_executor.apply(pages[p.page], p.instructions)
+            except InvalidEditError as e:
+                raise InvalidEditError(f"page {p.page}, {e.message}") from e
+
+        content = serialize(_touch(meta, path, chapter, now), preamble, edited)
+        # Round-trip check: the file must parse back to the same pages, so an edit can never
+        # add a phantom page or merge two (e.g. a marker built across an edit boundary).
+        stored = parse(content)[2]
+        if stored.keys() != pages.keys() or any(
+            stored[n] != pages[n] for n in pages if n not in numbers
+        ):
+            raise InvalidEditError("edits would change the page structure of the chapter")
+        _atomic_write(path, content)
+        return {n: stored[n] for n in sorted(numbers)}

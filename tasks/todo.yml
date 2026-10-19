@@ -38,28 +38,37 @@ review:
 feature: instructions-and-accept
 design: solutions/instructions_lld.md
 tests: metric/instructions_test_cases.yml
-status: awaiting_approval   # awaiting_approval -> in_progress -> done
+status: in_progress   # awaiting_approval -> in_progress -> done
 
 gates:
-  - {id: G1, done: false, desc: LLD (solutions/instructions_lld.md) approved}
-  - {id: G2, done: false, desc: metric/instructions_test_cases.yml approved (frozen after)}
+  - {id: G1, done: true, desc: LLD (solutions/instructions_lld.md) approved}
+  - {id: G2, done: true, desc: metric/instructions_test_cases.yml approved (frozen after)}
   - {id: G3, done: false, desc: "ANTHROPIC_AGENT_API_KEY + ANTHROPIC_AGENT_MODEL exported; approval to spend on RL-* real-LLM tests"}
 
 steps:
-  - {id: 1, done: false, desc: "uv add anthropic; Settings: llm_timeout_s, llm_effort, instruction_max_book_chars"}
-  - {id: 2, done: false, desc: "Extract services/speech.transcribe_upload from dictationer.py; dictation tests stay green (IM2)"}
-  - {id: 3, done: false, desc: "schemas/instructions.py (discriminated Edit union + validators, LLM I/O models)"}
-  - {id: 4, done: false, desc: "edit_executor.py + letter-boundary guard + EX-* tests"}
-  - {id: 5, done: false, desc: "quote_resolver.py + QR-* tests (incl. property test)"}
-  - {id: 6, done: false, desc: "ChapterStore: book_outline, read_chapter_pages, apply_edits (lock, sha, atomic) + CS-* tests; GET gains content_sha256"}
-  - {id: 7, done: false, desc: "llm.py AgentLLM (os.environ key/model, messages.parse, error mapping, caching) + LL-* tests"}
-  - {id: 8, done: false, desc: "instruction_extractor.py (pass 1 outline-only, pass 2 per chapter / whole book, budget) + IE-* tests"}
-  - {id: 9, done: false, desc: "api/instructions.py routes + router + lifespan wiring + AI-*/AA-* tests"}
-  - {id: 10, done: false, desc: "Verify: make test, ruff, mypy strict"}
+  - {id: 1, done: true, desc: "uv add anthropic; Settings: llm_timeout_s, llm_effort, instruction_max_book_chars"}
+  - {id: 2, done: true, desc: "Extract services/speech.transcribe_upload from dictationer.py; dictation tests stay green (IM2)"}
+  - {id: 3, done: true, desc: "schemas/instructions.py (discriminated Edit union + validators, LLM I/O models)"}
+  - {id: 4, done: true, desc: "edit_executor.py + letter-boundary guard + EX-* tests"}
+  - {id: 5, done: true, desc: "quote_resolver.py + QR-* tests (incl. property test)"}
+  - {id: 6, done: true, desc: "ChapterStore: book_outline, read_chapter_pages, apply_edits (lock, sha, atomic) + CS-* tests; GET gains content_sha256"}
+  - {id: 7, done: true, desc: "llm.py AgentLLM (os.environ key/model, messages.create + json_schema (D1), error mapping, caching) + LL-* tests"}
+  - {id: 8, done: true, desc: "instruction_extractor.py (pass 1 outline-only, pass 2 per chapter / whole book, budget) + IE-* tests"}
+  - {id: 9, done: true, desc: "api/instructions.py routes + router + lifespan wiring + AI-*/AA-* tests"}
+  - {id: 10, done: true, desc: "Verify: make test, ruff, mypy strict"}
   - {id: 11, done: false, desc: "Real-LLM run RL-01..03 (after G3); record IM7 / IM8"}
-  - {id: 12, done: false, desc: "Add curls to solutions/dictation_curls.md; fill review section"}
+  - {id: 12, done: true, desc: "Add curls to solutions/dictation_curls.md; fill review section"}
 
-review: {}
+review:
+  approval: "User replied 'approved' to LLD + test cases (G1, G2). G3 (env vars + spend) still open."
+  results: "make test: 514 passed, 2 skipped (RL, opt-in), 1 deselected (slow); baseline 390. ruff clean; mypy strict clean (36 files)"
+  e2e: "Live server, real Whisper, no LLM key: dictate -> GET (sha) -> /accept remove + Devanagari add = 200 -> replay = 409 page_changed, file unchanged; /instructions -> 502 llm_not_configured; unknown book -> 404"
+  behaviour_vs_main:
+    - "GET page gains content_sha256 (additive); test_get_page exact-dict expectation extended with that key, nothing removed"
+    - "Dictation unchanged: pipeline moved to services/speech.transcribe_upload; all 390 existing tests pass (IM2)"
+  deviations: "solutions/instructions_lld.md §10 D1-D8 (D1: messages.create + transform_schema instead of messages.parse, so refusal/max_tokens are detectable)"
+  pending:
+    - "Step 11 / G3: export ANTHROPIC_AGENT_API_KEY + ANTHROPIC_AGENT_MODEL, approve spend, run RUN_LLM_TESTS=1 uv run pytest -m llm -s; record IM7 / IM8"
 
 ---
 feature: chapter-metadata

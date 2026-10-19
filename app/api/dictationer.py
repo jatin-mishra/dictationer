@@ -2,23 +2,20 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Header, Path, Query, Request, UploadFile, status
-from starlette.concurrency import run_in_threadpool
 
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
-from app.schemas.books import MAX_CHAPTER
+from app.schemas.books import MAX_CHAPTER, MAX_PAGE
 from app.schemas.dictation import DictationResponse, Language, PageResponse
-from app.services import audio, script_normalizer, transcript_merge
+from app.services import speech
 from app.services.idempotency import IdempotencyCache
 from app.services.transcription.router import TranscriberRouter
-from app.storage.chapter_store import ChapterNotFoundError, ChapterStore, slugify
+from app.storage.chapter_store import ChapterNotFoundError, ChapterStore, page_hash, slugify
 
 router = APIRouter(prefix="/v1", tags=["dictation"])
 
 _AUTHOR_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_-]{8,128}")
-
-MAX_PAGE = 10_000
 
 
 class InvalidAuthorIdError(AppError):
@@ -86,42 +83,19 @@ async def create_dictation(
         # Chapters are created explicitly; fail before spending an STT call on a missing one.
         if not await store.chapter_exists(author_id, book, chapter):
             raise ChapterNotFoundError(f"Chapter {chapter} not found")
-        max_seconds = settings.max_audio_seconds + settings.audio_duration_tolerance_s
-        data = await audio.read_upload(audio_file, settings.max_audio_bytes)
-        clip = await run_in_threadpool(audio.decode, data, max_seconds)
-        audio.validate(clip, max_seconds, settings.silence_rms_threshold)
-
-        segments = audio.split(
-            clip,
-            settings.segment_seconds,
-            settings.segment_overlap_seconds,
-            settings.audio_duration_tolerance_s,
+        heard = await speech.transcribe_upload(
+            audio_file, language, transcribers, settings, merge_segments
         )
-        texts, engine = await transcribers.transcribe_many(
-            segments, language, settings.segment_concurrency, settings.silence_rms_threshold
-        )
-        if merge_segments:
-            raw = transcript_merge.merge(
-                texts,
-                settings.segment_max_overlap_words,
-                settings.segment_min_overlap_words,
-                settings.segment_max_edge_words,
-            )
-            text, warnings = script_normalizer.normalize(raw, language)
-        else:
-            text = script_normalizer.guard(" ".join(t.strip() for t in texts if t.strip()))
-            warnings = []
-
         # Only reached when every step above succeeded: failures never write partial text.
-        await store.append_to_page(author_id, book, chapter, page_number, text)
+        await store.append_to_page(author_id, book, chapter, page_number, heard.text)
         return DictationResponse(
-            text=text,
+            text=heard.text,
             language=language,
-            engine=engine,
+            engine=heard.engine,
             book=book,
             chapter=chapter,
             page=page_number,
-            warnings=warnings,
+            warnings=heard.warnings,
         )
 
     if idempotency_key is None:
@@ -148,5 +122,10 @@ async def get_page(
     book = slugify(book_name)
     content, pages = await store.read_page(author_id, book, chapter_number, page)
     return PageResponse(
-        book=book, chapter=chapter_number, page=page, content=content, available_pages=pages
+        book=book,
+        chapter=chapter_number,
+        page=page,
+        content=content,
+        available_pages=pages,
+        content_sha256=page_hash(content),
     )

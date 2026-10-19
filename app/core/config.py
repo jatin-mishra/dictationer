@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     segment_concurrency: int = 3
     segment_merge: bool = True  # false: append segment texts as-is (for testing overlap)
 
+    # Instruction LLM (Anthropic). Key and model are read from os.environ
+    # (ANTHROPIC_AGENT_API_KEY / ANTHROPIC_AGENT_MODEL), never from here.
+    llm_timeout_s: float = 60.0
+    llm_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None  # sent only if set
+    instruction_max_book_chars: int = 300_000  # whole-book search budget (no chapter spoken)
+
     @model_validator(mode="after")
     def _check_segmentation(self) -> Self:
         if self.segment_seconds <= 0:

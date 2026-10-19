@@ -25,3 +25,4 @@ class PageResponse(BaseModel):
     page: int
     content: str
     available_pages: list[int]
+    content_sha256: str  # pass back to /accept so edits never land on a changed page

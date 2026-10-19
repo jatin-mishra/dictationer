@@ -1,6 +1,6 @@
 # Instructions & Accept APIs — Plan & LLD
 
-> Status: **DRAFT — pending review**. Builds on the dictation service (`app/`).
+> Status: **APPROVED 2026-10-19 — implemented** (see §10 for deviations found while building). Builds on the dictation service (`app/`).
 > Companion files: `tasks/todo.yml` (plan), `metric/instructions_test_cases.yml` (tests & metrics — pending review).
 
 ---
@@ -15,6 +15,7 @@
 | I4 | Page changed between /instructions and /accept | Each page carries **`content_sha256`**; /accept returns **409 `page_changed`** if it differs. All-or-nothing. |
 | I5 | LLM | Anthropic SDK (`anthropic`, async). Key and model from **`os.environ.get("ANTHROPIC_AGENT_API_KEY")`** / **`os.environ.get("ANTHROPIC_AGENT_MODEL")`**. Never in `Settings` (lesson L1). |
 | I6 | Offset unit | **Unicode code points** (Python `str` index) of the page content exactly as `GET` returns it (NFC). Ranges are half-open `[from_offset, to_offset)`. |
+| I8 | How the LLM is called | **Only the official Python `anthropic` SDK** (`AsyncAnthropic`). No raw HTTP, no LangChain / LiteLLM / OpenAI-compatible shims. |
 | I7 | Does /instructions write? | **No.** It only proposes. Only /accept changes files, and /accept never calls the LLM. |
 
 ---
@@ -376,3 +377,21 @@ An offset `o` is invalid if `content[o]` is a combining mark (Unicode category `
 - Undo / version history.
 - Fuzzy quote matching beyond whitespace.
 - Server-side refusal `fallbacks` (model is env-configured; can be added once the model is fixed).
+
+---
+
+## 10. Implementation notes (deviations from the approved text)
+
+| # | Section | Change | Why |
+|---|---|---|---|
+| D1 | §6.2 | `messages.create(output_config={"format": {"type": "json_schema", "schema": anthropic.transform_schema(Model)}})` then `Model.model_validate_json`, instead of `messages.parse()` | `parse()` validates the JSON before returning, so a refusal / `max_tokens` cut-off surfaces as a pydantic `ValidationError` and `stop_reason` can't be checked (LL-03 unreachable). Still the official SDK only (I8). |
+| D2 | §3.1 | Audio limits follow the dictation settings (now 60 s / 12 MiB, segmented) | `speech.transcribe_upload` is shared; the long-audio feature landed before this one. |
+| D3 | §6.3 | A spoken page with no spoken chapter is kept as a hint for the whole-book search | A page number alone still narrows the search. |
+| D4 | §6.4 | Page text is sent verbatim (not HTML-escaped) | The LLM copies quotes from it; `&amp;` would never match the page. The system prompt marks the book block as data. |
+| D5 | §6.4 | An edit naming a chapter the call was not shown → `unresolved: page_not_found` | Its quote can't have come from that chapter. |
+| D6 | §6.8 | After applying, the serialised chapter is parsed back; any change to the page set or to untouched pages → 422 `invalid_edit`, nothing written | Catches a marker formed across an edit boundary (`"#"` inserted before `" page 2"`), which per-insert escaping can't see. |
+| D7 | §3.4 | `unresolved[].reason` codes: `quote_not_found`, `page_not_found`, `splits_letter`, `conflicts_with_other_edit`, `missing_text`, `missing_position`, `not_found` (LLM couldn't place it), `no_instruction_found`, `book_empty` (no LLM call made) | Enumerated while implementing. |
+| D8 | §6.2 | `/instructions` checks book exists and LLM configured **before** STT | No STT spend on a request that can't succeed. |
+| D9 | §3.1 / §5 | `update.details` gains **`old_text`** (always in /instructions output; optional on /accept, verified against `content[from:to]` when sent → else 422 `invalid_edit`) | User request: show what is replaced. Optional keeps old clients working. |
+| D10 | §6.5 | The **action is derived in code** from a word-level diff of `target_text` → `new_text`: only words dropped → `remove`, only words inserted → `add`, otherwise `update` of just the differing words. No word change → `unresolved: no_change` | User report: a deletion came back as `update` (LLM rewrote the surrounding text). The LLM's label is not trusted; word boundaries are whitespace, so the diff never splits a letter. |
+| D11 | §6.4 | Prompt: remove when only deleting (quote only the deleted words); keep the page's punctuation, since the transcript has lost it | Same report: commas were dropped in a replacement. |

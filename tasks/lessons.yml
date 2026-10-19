@@ -8,3 +8,11 @@ lessons:
     date: 2026-10-19
     pattern: "Text-matching algorithm specified and frozen from synthetic examples; real STT output broke the assumption (words at a cut get garbled)."
     rule: "When an algorithm consumes model/engine output, run it on one real sample before freezing the spec; derive edge cases from that real output."
+  - id: L3
+    date: 2026-10-19
+    pattern: "Vendor integration approach left implicit (SDK vs raw HTTP vs third-party wrapper)."
+    rule: "For a vendor API, use only that vendor's official SDK for the project language (here: Python `anthropic`); no raw HTTP, shims or wrappers. Write that choice into the LLD."
+  - id: L4
+    date: 2026-10-19
+    pattern: "Trusted an LLM-chosen label (edit action) that code could compute; a deletion came back as an update."
+    rule: "When an LLM output field is derivable from other fields (action from old vs new text, offsets from quotes), compute it in code and treat the LLM value as a hint. Test with the real failing output."
