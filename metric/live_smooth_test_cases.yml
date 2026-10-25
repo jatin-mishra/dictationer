@@ -1,0 +1,41 @@
+# Status: APPROVED 2026-10-20 (test-case outline approved with the plan) — FROZEN.
+# Plan: /Users/jatinmishra/.claude/plans/curious-fluttering-hoare.md
+# Smooth live partials: word agreement (stable / tentative), background inference worker,
+# cadence: first partial after 1 s of utterance (as today, LP-06), then every >= 0.5 s of new
+# audio on Whisper, >= 1.0 s on Sarvam.
+
+success_metrics:
+  - {id: SM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: SM2, desc: "Existing streaming / live tests pass; LP-01 expected partial only extended with the additive stable / tentative keys", target: 100%}
+  - {id: SM3, desc: "Real run (say audio streamed in real time, real Whisper): stable text never shrinks", target: "0 shrinks"}
+  - {id: SM4, desc: "Real run: median interval between partials of one utterance", target: "<= 1.0 s (was ~1-2 s)"}
+  - {id: SM5, desc: ruff + mypy strict clean, target: 0 errors}
+
+failure_criteria:
+  - a word shown as stable later changes or disappears in a partial of the same utterance
+  - a final is sent out of order, or before its text is appended to the book
+  - the receive loop stops reading frames while an inference runs
+  - a partial for an utterance arrives after that utterance's final
+  - partials=false behaviour differs from main
+
+test_cases:
+  # ───────── WordAgreement (pure) ─────────
+  - {id: WA-01, scenario: "first hypothesis 'the river flows'", expect: "stable '', tentative 'the river flows'"}
+  - {id: WA-02, scenario: "then 'the river flows quietly'", expect: "stable 'the river flows', tentative 'quietly'"}
+  - {id: WA-03, scenario: "'The river, flows.' then 'the river flows on'", expect: "agree ignoring case / punctuation: stable 'The river, flows.' (first spelling kept), tentative 'on'"}
+  - {id: WA-04, scenario: "stable 'the river flows', next pass 'a river glows today'", expect: "stable unchanged; tentative = words after position 3 ('today')"}
+  - {id: WA-05, scenario: "next pass shorter than stable", expect: "stable unchanged; tentative ''"}
+  - {id: WA-06, scenario: "the measured sequence (1..9 s passes of the 'river' recording)", expect: "stable word counts 0,3,8,11,15,17,21,24,29 are reached (never decrease)"}
+  - {id: WA-07, scenario: "empty hypothesis", expect: "stable unchanged, tentative ''"}
+
+  # ───────── Live WS ─────────
+  - {id: LS-01, scenario: "partials=true, one sentence (fake returns same text each call)", expect: "every partial has text == join(stable, tentative); first partial stable '' tentative 'Hello world.'; a later one stable 'Hello world.'"}
+  - {id: LS-02, scenario: "partials=false", expect: "messages ready, final, done (unchanged)"}
+  - {id: LS-03, scenario: "fake transcriber sleeps 1 s; frames keep arriving", expect: "receive loop keeps consuming: all frames read before the first transcription returns (no blocking)"}
+  - {id: LS-04, scenario: "two sentences, slow fake", expect: "finals in spoken order; each final's text is in the page when the final message is received"}
+  - {id: LS-05, scenario: "partial in flight when its utterance ends", expect: "that partial is dropped; no partial after the final (LP-04 kept)"}
+  - {id: LS-06, scenario: "Whisper, 3 s tone: count partial-start audio lengths", expect: "first at >= 1 s, then steps of >= 0.5 s new audio"}
+  - {id: LS-07, scenario: "Sarvam (hi), 3 s tone", expect: "steps of >= 1.0 s new audio"}
+  - {id: LS-08, scenario: "final queued while a partial is waiting to start", expect: "final transcribed first (finals first)"}
+  - {id: LS-09, scenario: "stop with queued finals + open tail", expect: "all queued finals, then tail final, then done"}
+  - {id: LS-10, scenario: "client disconnects with finals queued", expect: "queued finals still appended to the book"}

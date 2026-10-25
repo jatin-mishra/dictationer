@@ -7,8 +7,8 @@ from app.services.audio import NoSpeechError
 
 log = logging.getLogger(__name__)
 
-# A transcribed line that looks like a page marker would create a phantom page in the chapter file.
-_MARKER_LINE = re.compile(r"^#(?=\s*page\s+\d+)", re.IGNORECASE | re.MULTILINE)
+# A transcribed line that looks like a page / lap marker would create a phantom page or lap.
+_MARKER_LINE = re.compile(r"^#(?=\s*(?:page|lap)\s+\d+)", re.IGNORECASE | re.MULTILINE)
 
 _MIN_RATIO = {Language.HI: 0.90, Language.EN: 0.90, Language.HINGLISH: 0.95}
 
@@ -46,7 +46,7 @@ def _script_warnings(text: str, language: Language) -> list[str]:
 
 
 def escape_markers(text: str) -> str:
-    """Escape lines that look like `# page N`, so they can't become phantom pages."""
+    """Escape lines that look like `# page N` / `# lap N`, so they can't become phantom ones."""
     return _MARKER_LINE.sub(r"\\#", text)
 
 

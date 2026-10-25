@@ -1,0 +1,80 @@
+# Status: APPROVED 2026-10-20 — FROZEN.
+# Once approved this file is FROZEN; any change needs explicit user review + approval.
+# Design: solutions/instructions_v2_lld.md
+# Unit tests use a fake Locator (no Ollama) and the existing FakeAgent (no Claude).
+# Fixture book for search-order cases: chapter 1 = pages {1, 2}; chapter 2 = pages {1, 2, 3}.
+#   Search order from the end (D4): (2,3) (2,2) (2,1) (1,2) (1,1)  — 5 pages.
+
+success_metrics:
+  - {id: IV-M1, desc: All test cases below pass (make test), target: 100%}
+  - {id: IV-M2, desc: "Existing edit-pass, quote_resolver, /accept chapter tests pass unchanged (pass-1 IE tests rewritten for the Locator, per LLD §6)", target: 100%}
+  - {id: IV-M3, desc: "Page checks per scope never exceed locator_max_pages", target: 100%}
+  - {id: IV-M4, desc: ruff + mypy strict clean, target: 0 errors}
+  - {id: IV-M5, desc: "Real run (gemma4:e2b + Claude) on RL-V* cases records correct location and a valid edit", target: "all RL-V* correct"}
+
+failure_criteria:
+  - a location the author did not say, or that does not exist, is trusted without search
+  - gemma's reworded instruction (missing target words) reaches Claude instead of transcript text
+  - search sends more than locator_max_pages pages for one scope
+  - a laps / manuscript instruction response cannot be applied by /accept
+  - /accept for manuscript / laps writes when content_sha256 is stale
+
+test_cases:
+  # ───────── Locator output → scopes (fake Locator) ─────────
+  - {id: IV-01, scenario: "type=chapter, locator returns chapter 2 page 3", expect: "Claude context = only <chapter 2><page 3>; no page search call"}
+  - {id: IV-02, scenario: "type=chapter, chapter 2 only", expect: "Claude context = whole chapter 2 (pages 1-3); no page search"}
+  - {id: IV-03, scenario: "type=chapter, chapter 9 (not in book)", expect: "treated as no location -> search from the end"}
+  - {id: IV-04, scenario: "type=chapter, chapter 2 page 9 (page not in chapter)", expect: "page dropped -> whole chapter 2 sent"}
+  - {id: IV-05, scenario: "type=chapter, locator also returns lap 4", expect: "lap ignored"}
+  - {id: IV-06, scenario: "type=laps, lap 2 spoken, laps {1,2,3}", expect: "Claude context = only lap 2; response chapter=2, page=1, type=laps"}
+  - {id: IV-07, scenario: "type=laps, locator returns chapter 3 page 1 but no lap", expect: "chapter/page ignored -> search laps from the end"}
+  - {id: IV-08, scenario: "locator instruction is not a substring of transcript (e.g. 'hata do' for '... flows hata do' is a substring; 'remove flows' is not)", expect: "non-substring -> whole transcript used for that scope"}
+  - {id: IV-09, scenario: "two scopes: chapter 1 page 1 and chapter 2 page 3", expect: "two Claude calls (one per chapter), each with only its page"}
+  - {id: IV-10, scenario: "two scopes in the same chapter: (2,1) and (2,3)", expect: "one Claude call with pages 1 and 3 of chapter 2"}
+  - {id: IV-11, scenario: "locator returns no scopes", expect: "unresolved no_instruction_found; no Claude call"}
+
+  # ───────── Search from the end (fake Locator.page_matches) ─────────
+  - {id: IS-01, scenario: "no location; target on (2,3)", expect: "1 page check; Claude gets only (2,3)"}
+  - {id: IS-02, scenario: "no location; target on (1,2)", expect: "4 page checks in order (2,3) (2,2) (2,1) (1,2); Claude gets (1,2)"}
+  - {id: IS-03, scenario: "no location; target nowhere", expect: "5 page checks; unresolved not_found; no Claude call for that scope"}
+  - {id: IS-04, scenario: "locator_max_pages=2; target on (2,1)", expect: "2 checks (2,3) (2,2), then unresolved not_found"}
+  - {id: IS-05, scenario: "page only (page 2, no chapter); target on (1,2)", expect: "checks only pages numbered 2: (2,2) then (1,2) -> found"}
+  - {id: IS-06, scenario: "type=laps no lap; laps {1,2,3}; target on lap 1", expect: "checks lap 3, 2, 1 -> Claude gets lap 1; response chapter=1"}
+  - {id: IS-07, scenario: "two scopes needing search", expect: "searched sequentially; each capped separately"}
+  - {id: IS-08, scenario: "one scope found by search + one spoken", expect: "both reach Claude; grouped per chapter"}
+  - {id: IS-09, scenario: "empty pages skipped (page content '')", expect: "not sent to page check; not counted toward cap"}
+  - {id: IS-10, scenario: "laps.md missing / no laps, type=laps", expect: "unresolved book_empty; no locator call"}
+
+  # ───────── Manuscript ─────────
+  - {id: IMS-01, scenario: "type=manuscript", expect: "no locator call; one Claude call with whole manuscript as chapter 1 page 1 + whole transcript; response type=manuscript"}
+  - {id: IMS-02, scenario: "manuscript empty or missing", expect: "unresolved book_empty; no Claude call"}
+  - {id: IMS-03, scenario: "manuscript > instruction_max_book_chars", expect: "422 book_too_large; no Claude call"}
+
+  # ───────── Errors / API ─────────
+  - {id: IA-01, scenario: "no type (existing client)", expect: "type=chapter; response adds type: chapter"}
+  - {id: IA-02, scenario: "type=foo", expect: 422}
+  - {id: IA-03, scenario: "Ollama unreachable / timeout", expect: "502 locator_unavailable"}
+  - {id: IA-04, scenario: "Ollama returns non-schema JSON", expect: "502 locator_bad_output"}
+  - {id: IA-05, scenario: "type=manuscript with Ollama down", expect: "200 (locator not used)"}
+  - {id: IA-06, scenario: "book missing", expect: "404 book_not_found; 0 STT calls (unchanged)"}
+  - {id: IA-07, scenario: "Claude not configured", expect: "502 llm_not_configured; 0 STT calls (unchanged)"}
+  - {id: IA-08, scenario: "Locator: real ollama SDK call shape (mocked client)", expect: "model=gemma4:e2b, format=JSON schema, temperature 0, host from settings"}
+
+  # ───────── /accept by type ─────────
+  - {id: AC-01, scenario: "/accept without type", expect: "unchanged + type: chapter"}
+  - {id: AC-02, scenario: "type=manuscript, edits computed on GET ?type=manuscript content + sha", expect: "200; manuscript.md updated; response pages=[{page:1, content, content_sha256}]"}
+  - {id: AC-03, scenario: "type=manuscript, stale sha (dictation after GET)", expect: "409 page_changed; file unchanged"}
+  - {id: AC-04, scenario: "type=manuscript, path 5, body.chapter 7, page 9", expect: "200 (numbers ignored)"}
+  - {id: AC-05, scenario: "type=manuscript, two page blocks", expect: "422 invalid_edit"}
+  - {id: AC-06, scenario: "type=laps, path 2, body.chapter 2, edit lap 2 with right sha", expect: "200; only lap 2 changed; other laps byte-identical"}
+  - {id: AC-07, scenario: "type=laps, path 2, body.chapter 3", expect: "422 chapter_mismatch"}
+  - {id: AC-08, scenario: "type=laps, lap 5 not in laps.md", expect: "404 lap_not_found"}
+  - {id: AC-09, scenario: "type=laps, inserted text contains '# lap 9' line", expect: "escaped; laps.md lap set unchanged"}
+  - {id: AC-10, scenario: "type=laps, stale sha", expect: "409 page_changed"}
+  - {id: AC-11, scenario: "type=laps / manuscript, book missing", expect: "404 book_not_found"}
+  - {id: AC-12, scenario: "instruction_response for laps fed straight into /accept?type=laps", expect: "200 (end-to-end with fakes)"}
+
+  # ───────── Real models (opt-in, RUN_LLM_TESTS=1, Ollama running) ─────────
+  - {id: RL-V1, scenario: "'chapter 3 page 12 mein flows hata do' on a book where page (3,12) has 'flows'", expect: "location (3,12); remove edit of 'flows'"}
+  - {id: RL-V2, scenario: "Hinglish, no location, target on 2nd-to-last page of a 5-page book", expect: "found by search in 2 checks; correct edit"}
+  - {id: RL-V3, scenario: "type=laps 'lap 2 mein bridge ki jagah pul likho'", expect: "lap 2; update edit; /accept?type=laps applies it"}

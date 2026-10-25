@@ -17,6 +17,8 @@ from app.services.edit_executor import InvalidEditError
 # Lenient on read (`#page 3`, `# Page 3, <hash>`), canonical on write (`# page 3, <hash>`).
 # The stored hash is ignored on read and recomputed on write, so a hand edit can't make it stale.
 _MARKER = re.compile(r"^#\s*page\s+(\d+)(?:\s*,\s*\S*)?\s*$", re.IGNORECASE | re.MULTILINE)
+# laps.md: `# lap N` headings, lenient on read like pages; no hash (laps are never offset-edited).
+_LAP_MARKER = re.compile(r"^#\s*lap\s+(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
 # Front matter only counts at the very start of the file and with a closing fence.
 _FRONT_MATTER = re.compile(r"\A---\n(.*?)^---[ \t]*(?:\n|\Z)", re.DOTALL | re.MULTILINE)
 _CHAPTER_FILE = re.compile(r"chapter-(\d+)\.md")
@@ -53,6 +55,10 @@ class ChapterExistsError(AppError):
 
 class PageNotFoundError(NotFoundError):
     code = "page_not_found"
+
+
+class LapNotFoundError(NotFoundError):
+    code = "lap_not_found"
 
 
 class PageChangedError(AppError):
@@ -148,14 +154,31 @@ def parse(text: str) -> tuple[ChapterMeta | None, str, dict[int, str]]:
             chapter_summary=known["chapter_summary"],
             extra={k: v for k, v in fields.items() if k not in _CHAPTER_KEYS},
         )
-    matches = list(_MARKER.finditer(text))
+    preamble, pages = _sections(text, _MARKER)
+    return meta, preamble, pages
+
+
+def _sections(text: str, marker: re.Pattern[str]) -> tuple[str, dict[int, str]]:
+    """Split text on numbered markers into (preamble, {number: content}); repeats are merged."""
+    matches = list(marker.finditer(text))
     preamble = (text[: matches[0].start()] if matches else text).strip("\n")
-    pages: dict[int, str] = {}
+    sections: dict[int, str] = {}
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        page = int(m.group(1))
-        pages[page] = _join(pages.get(page, ""), text[m.end() : end].strip("\n"))
-    return meta, preamble, pages
+        n = int(m.group(1))
+        sections[n] = _join(sections.get(n, ""), text[m.end() : end].strip("\n"))
+    return preamble, sections
+
+
+def parse_laps(text: str) -> tuple[str, dict[int, str]]:
+    """Split laps.md into (preamble before the first lap, {lap: content})."""
+    return _sections(text, _LAP_MARKER)
+
+
+def serialize_laps(preamble: str, laps: dict[int, str]) -> str:
+    blocks = [preamble] if preamble else []
+    blocks += [f"# lap {n}\n{laps[n]}".rstrip("\n") for n in sorted(laps)]
+    return "\n\n".join(blocks) + "\n" if blocks else ""
 
 
 def serialize(meta: ChapterMeta | None, preamble: str, pages: dict[int, str]) -> str:
@@ -193,6 +216,21 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")  # tolerate a BOM from hand-edited files
 
 
+def _read_or_empty(path: Path) -> str:
+    """Books created before manuscript.md / laps.md existed get the file on first write."""
+    try:
+        return _read(path)
+    except FileNotFoundError:
+        return ""
+
+
+def _create_empty(path: Path) -> None:
+    try:
+        path.open("x", encoding="utf-8").close()  # exclusive create: never truncates a file
+    except FileExistsError:
+        pass
+
+
 def _birth_time(path: Path) -> datetime:
     st = path.stat()
     return datetime.fromtimestamp(getattr(st, "st_birthtime", st.st_mtime), UTC)
@@ -214,9 +252,26 @@ def _read_chapter(path: Path, chapter: int) -> tuple[ChapterMeta | None, str, di
         raise ChapterNotFoundError(f"Chapter {chapter} not found") from e
 
 
+def _single_block(page_edits: list[PageEdits]) -> PageEdits:
+    """Laps and the manuscript have no pages: exactly one block, its page number ignored."""
+    if len(page_edits) != 1:
+        raise InvalidEditError("laps and manuscript take exactly one block of edits")
+    return page_edits[0]
+
+
+def _edit_unit(content: str, edits: PageEdits, where: str) -> str:
+    """Apply one block to a lap / the manuscript if it still hashes to content_sha256."""
+    if page_hash(content) != edits.content_sha256:
+        raise PageChangedError(f"The {where} changed since the edits were computed")
+    try:
+        return edit_executor.apply(content, edits.instructions)
+    except InvalidEditError as e:
+        raise InvalidEditError(f"{where}, {e.message}") from e
+
+
 class ChapterStore:
-    """Books live at {root}/{author_id}/{book_slug}/ with a book.md, and chapters at
-    {root}/{author_id}/{book_slug}/chapter-{n}.md.
+    """Books live at {root}/{author_id}/{book_slug}/ with a book.md, manuscript.md and laps.md,
+    and chapters at {root}/{author_id}/{book_slug}/chapter-{n}.md.
 
     Writes are serialised per file with an asyncio.Lock, so this assumes a single process
     (one uvicorn worker). Multi-worker would need fcntl.flock behind the same methods.
@@ -238,6 +293,12 @@ class ChapterStore:
 
     def chapter_path(self, author_id: str, book_slug: str, chapter: int) -> Path:
         return self._resolve(author_id, book_slug, f"chapter-{chapter}.md")
+
+    def manuscript_path(self, author_id: str, book_slug: str) -> Path:
+        return self._resolve(author_id, book_slug, "manuscript.md")
+
+    def laps_path(self, author_id: str, book_slug: str) -> Path:
+        return self._resolve(author_id, book_slug, "laps.md")
 
     def _now(self) -> str:
         return _utc(self._clock())
@@ -261,7 +322,103 @@ class ChapterStore:
             )
             path.parent.mkdir(parents=True, exist_ok=True)
             await asyncio.to_thread(_atomic_write, path, content + "\n")
+            for extra in (self.manuscript_path, self.laps_path):
+                await asyncio.to_thread(_create_empty, extra(author_id, book_slug))
             return meta
+
+    async def book_exists(self, author_id: str, book_slug: str) -> bool:
+        """Folder, not book.md: legacy books count too."""
+        return await asyncio.to_thread(self.book_path(author_id, book_slug).parent.is_dir)
+
+    async def append_to_manuscript(self, author_id: str, book_slug: str, text: str) -> None:
+        path = self.manuscript_path(author_id, book_slug)
+        async with self._lock_for(path):
+            await asyncio.to_thread(self._append_manuscript_sync, path, book_slug, text)
+
+    @staticmethod
+    def _append_manuscript_sync(path: Path, book_slug: str, text: str) -> None:
+        if not path.parent.is_dir():
+            raise BookNotFoundError(f"Book '{book_slug}' not found")
+        _atomic_write(path, _join(_read_or_empty(path).strip("\n"), text) + "\n")
+
+    async def read_manuscript(self, author_id: str, book_slug: str) -> str:
+        """Whole manuscript, '' when not written yet. No lock: writes are atomic replaces."""
+        path = self.manuscript_path(author_id, book_slug)
+        return await asyncio.to_thread(self._read_book_file, path, book_slug)
+
+    async def read_lap(self, author_id: str, book_slug: str, lap: int) -> tuple[str, list[int]]:
+        """Returns (lap content, sorted lap numbers). No lock: writes are atomic replaces."""
+        path = self.laps_path(author_id, book_slug)
+        _, laps = parse_laps(await asyncio.to_thread(self._read_book_file, path, book_slug))
+        if lap not in laps:
+            raise LapNotFoundError(f"Lap {lap} not found")
+        return laps[lap], sorted(laps)
+
+    @staticmethod
+    def _read_book_file(path: Path, book_slug: str) -> str:
+        if not path.parent.is_dir():
+            raise BookNotFoundError(f"Book '{book_slug}' not found")
+        return _read_or_empty(path).strip("\n")
+
+    async def read_laps(self, author_id: str, book_slug: str) -> dict[int, str]:
+        """{lap: content}, {} when laps.md is missing or empty. No lock: writes are atomic."""
+        path = self.laps_path(author_id, book_slug)
+        return parse_laps(await asyncio.to_thread(self._read_book_file, path, book_slug))[1]
+
+    async def apply_manuscript_edits(
+        self, author_id: str, book_slug: str, page_edits: list[PageEdits]
+    ) -> str:
+        """Edits on the whole manuscript (one block; its page number is ignored)."""
+        path = self.manuscript_path(author_id, book_slug)
+        async with self._lock_for(path):
+            return await asyncio.to_thread(
+                self._apply_manuscript_sync, path, book_slug, _single_block(page_edits)
+            )
+
+    @classmethod
+    def _apply_manuscript_sync(cls, path: Path, book_slug: str, edits: PageEdits) -> str:
+        content = cls._read_book_file(path, book_slug)
+        edited = _edit_unit(content, edits, "manuscript").strip("\n")
+        _atomic_write(path, f"{edited}\n" if edited else "")
+        return edited
+
+    async def apply_lap_edits(
+        self, author_id: str, book_slug: str, lap: int, page_edits: list[PageEdits]
+    ) -> str:
+        """Edits on one lap (one block; its page number is ignored)."""
+        path = self.laps_path(author_id, book_slug)
+        async with self._lock_for(path):
+            return await asyncio.to_thread(
+                self._apply_lap_sync, path, book_slug, lap, _single_block(page_edits)
+            )
+
+    @classmethod
+    def _apply_lap_sync(cls, path: Path, book_slug: str, lap: int, edits: PageEdits) -> str:
+        preamble, laps = parse_laps(cls._read_book_file(path, book_slug))
+        if lap not in laps:
+            raise LapNotFoundError(f"Lap {lap} not found")
+        content = serialize_laps(
+            preamble, {**laps, lap: _edit_unit(laps[lap], edits, f"lap {lap}")}
+        )
+        # Round-trip check, as for chapters: an edit must never add, merge or drop a lap.
+        stored = parse_laps(content)[1]
+        if stored.keys() != laps.keys() or any(stored[n] != laps[n] for n in laps if n != lap):
+            raise InvalidEditError("edits would change the lap structure of laps.md")
+        _atomic_write(path, content)
+        return stored[lap]
+
+    async def append_to_lap(self, author_id: str, book_slug: str, lap: int, text: str) -> None:
+        path = self.laps_path(author_id, book_slug)
+        async with self._lock_for(path):
+            await asyncio.to_thread(self._append_lap_sync, path, book_slug, lap, text)
+
+    @staticmethod
+    def _append_lap_sync(path: Path, book_slug: str, lap: int, text: str) -> None:
+        if not path.parent.is_dir():
+            raise BookNotFoundError(f"Book '{book_slug}' not found")
+        preamble, laps = parse_laps(_read_or_empty(path))
+        laps[lap] = _join(laps.get(lap, ""), text)
+        _atomic_write(path, serialize_laps(preamble, laps))
 
     async def create_chapter(
         self, author_id: str, book_slug: str, chapter: int, chapter_name: str

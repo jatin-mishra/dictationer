@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, NonNegativeInt
 
 from app.schemas.books import MAX_CHAPTER, MAX_PAGE
+from app.schemas.dictation import DictationType
 
 # Offsets are Unicode code points (Python str indices) into the page content exactly as GET
 # returns it; ranges are half-open [from_offset, to_offset). Range order, bounds and
@@ -75,7 +76,10 @@ class Unresolved(BaseModel):
 
 
 class InstructionResponse(BaseModel):
+    """For type=laps `chapter` is the lap number; laps and manuscript always use page 1."""
+
     book: str
+    type: DictationType = DictationType.CHAPTER
     transcript: str
     instructions: list[ChapterEdits]
     unresolved: list[Unresolved]
@@ -89,21 +93,38 @@ class PageContent(BaseModel):
 
 class AcceptResponse(BaseModel):
     book: str
+    type: DictationType = DictationType.CHAPTER
     chapter: int
     pages: list[PageContent]
 
 
-# ── LLM structured output. The LLM quotes text; it never counts offsets. ──
-
-
 class Scope(BaseModel):
-    chapter: int | None = Field(description="Chapter number if spoken, else null")
-    page: int | None = Field(description="Page number if spoken, else null")
-    instruction: str = Field(description="One self-contained edit instruction")
+    """One instruction and where it goes, in the book's units (for laps: chapter = lap)."""
+
+    chapter: int | None
+    page: int | None
+    instruction: str
 
 
-class ScopeResult(BaseModel):
-    scopes: list[Scope]
+# ── Locator (local Ollama) structured output. ──
+
+
+class LocatorScope(BaseModel):
+    chapter: int | None
+    page: int | None
+    lap: int | None
+    instruction: str
+
+
+class LocatorResult(BaseModel):
+    scopes: list[LocatorScope]
+
+
+class PageMatch(BaseModel):
+    found: bool
+
+
+# ── LLM structured output. The LLM quotes text; it never counts offsets. ──
 
 
 class QuotedEdit(BaseModel):

@@ -11,6 +11,9 @@ class TranscriberRouter:
     def __init__(self, routes: Mapping[Language, Transcriber]) -> None:
         self._routes = dict(routes)
 
+    def engine_for(self, language: Language) -> str:
+        return self._routes[language].name
+
     async def transcribe(self, clip: AudioClip, language: Language) -> tuple[str, str]:
         """Returns (raw text, engine name)."""
         transcriber = self._routes[language]

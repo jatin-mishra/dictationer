@@ -1,3 +1,155 @@
+feature: smooth-live-partials (MVP)
+design: /Users/jatinmishra/.claude/plans/curious-fluttering-hoare.md
+tests: metric/live_smooth_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: "Plan approved (incl. test-case outline); Sarvam cadence 1 s; partials stay opt-in (client sends partials:true)"}
+
+steps:
+  - {id: 1, done: true, desc: "streaming.py: WordAgreement (LocalAgreement-2), PartialCadence, per-engine step (WA-*, LS-06/07)"}
+  - {id: 2, done: true, desc: "live.py: receive loop never awaits inference; one worker, finals first, partial payload stable/tentative, timing logs, shielded drain (LS-*)"}
+  - {id: 3, done: true, desc: "scripts/live_mic.py: stable normal, tentative dimmed; protocol docstring"}
+  - {id: 4, done: true, desc: "Verify: make test / lint / mypy; real-time WS run before vs after"}
+
+review:
+  results: "make test: 834 passed, 5 skipped (baseline 808 + 26); ruff + mypy strict clean; live tests 3/3 repeat runs green"
+  real_run_before_after: "Same `say` clip streamed in real time, real Whisper. First words: 2.74 s -> 1.66 s into the sentence. Partials: 4 -> 9, median gap 1.13 s -> 0.65 s (max 1.38 -> 0.99). Stable text shrinks: 0. Finals unchanged in timing (6.22/11.82 -> 6.25/11.80 s) and text; queued->sent 0.70-0.74 s (= inference)"
+  behaviour_vs_main:
+    - "partials=false: same messages and writes"
+    - "partial messages gain stable / tentative (additive); LP-01 expectation extended with those keys (plan said existing tests unchanged: corrected)"
+    - "Cadence after the first partial: 0.5 s of new audio on Whisper (was 1 s); Sarvam stays 1 s"
+    - "Queued finals are finished even if the handler is cancelled (asyncio.shield)"
+  follow_ups:
+    - "Stable keeps the first-shown spelling, e.g. 'village.' then 'while' (final fixes punctuation)"
+    - "Deferred: soft cut before the 20 s cap, committed text as Whisper context, word-by-word animation in the app"
+
+---
+feature: pause-split-and-live-ws (MVP)
+design: /Users/jatinmishra/.claude/plans/tell-me-plan-for-zazzy-lemon.md
+tests: metric/pause_split_and_live_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: "Plan approved (MVP; PCM16 16k; commit per utterance; finals only; WS independent of /dictations; /dictations splits at pauses)"}
+  - {id: G2, done: true, desc: "metric/pause_split_and_live_test_cases.yml approved (frozen after)"}
+
+steps:
+  - {id: 1, done: true, desc: "config: segment_strategy pause|fixed, default pause (PC-*)"}
+  - {id: 2, done: true, desc: "audio: frame_rms + split_at_pauses returning (clip, overlaps_previous) (PF-*, PS-*)"}
+  - {id: 3, done: true, desc: "speech.transcribe_upload: strategy switch; merge only across overlap cuts (PA-*)"}
+  - {id: 4, done: true, desc: "services/streaming.py: UtteranceSegmenter + transcribe_utterance (SG-*)"}
+  - {id: 5, done: true, desc: "api/live.py WS /v1/dictations/live + router include (LV-*)"}
+  - {id: 6, done: true, desc: "scripts/live_mic.py (sounddevice); solutions/dictation_curls.md protocol note"}
+  - {id: 7, done: true, desc: "Verify: make test, ruff, mypy strict; real-Whisper fixed vs pause compare; WS run with real speech streamed in real time (scripts/live_mic.py with a physical mic: left for the user)"}
+
+review:
+  approval: "Plan approved (MVP); spec G2 approved by user ('approved')."
+  results: "make test: 755 passed, 2 skipped (baseline 574 + 181 new incl. parametrized); ruff + format clean; mypy strict clean (38 files); WS tests 5/5 repeat runs green"
+  e2e_live_ws: "Real MLX Whisper, `say` speech with 1.2 s pauses streamed in real time: 5 sentences -> 5 finals, each ~0.6-0.9 s after the pause; stop -> tail final + done; page content == the 5 sentences in order"
+  e2e_rest_compare: "Same 33.9 s `say` clip, real Whisper. pause: 4 cuts all inside pauses, text matches the script. fixed (main): ~15 words dropped by overlap merge ('leave now. A man in a grey coat ... leather case.') and stray periods at sliced words"
+  behaviour_vs_main:
+    - "POST /v1/dictations: audio with a pause in the last 3 s before a 10 s mark is cut there with no overlap; otherwise identical to main (PS-10, all LA-* green). SEGMENT_STRATEGY=fixed == main"
+    - "get_chapter_store / get_transcriber_router annotated HTTPConnection (was Request) so the WS route shares them; no behaviour change"
+    - "TranscriberRouter.engine_for added (additive)"
+  test_fixes_during_impl:
+    - "SG-07 probe index: pre-roll is whole 30 ms frames, so the tone starts 0.31 s into the clip, not 0.30 s. Spec unchanged"
+    - "PA-02 asserts merge() never receives texts from both sides of a pause cut (merge still runs per group, to keep main's whitespace flattening for single segments)"
+  follow_ups:
+    - "Deferred (MVP): backpressure queue, busy-retry, session limits/idle timeout, adaptive noise floor, partials, Opus input, query-param auth for browsers"
+    - "Energy threshold 0.003 may never see silence in a noisy room -> live falls back to 20 s cuts, REST to overlap windows"
+  addendum_partials_and_browser_auth:
+    request: "User: 'it must continuously show text being spoken' -> 'implement that'; '2. yes' (partials for hi/hinglish too), '3. web app'"
+    spec: "metric/pause_split_and_live_test_cases.yml addendum SG-09, LP-01..06, LH-01..04 (frozen cases untouched)"
+    design: "start.partials (default false = existing clients unchanged): every +1 s of an open utterance (speech ongoing, >= 9 voiced frames), one background transcription of the audio so far -> {type: partial}; never stored; dropped if its utterance was finalised; failures ignored; in-flight partial awaited before the tail/at exit (MLX thread can't be cancelled). start.author_id for browsers; header still works; both must match"
+    results: "766 passed, 2 skipped (+11); ruff + mypy strict clean; WS tests 10/10 repeat runs green"
+    e2e: "Real Whisper, 9 s sentence streamed in real time, no header + author_id in start: 7 partials ~1.1 s apart, growing text, then final ~1.8 s after speech end; partial mistakes ('had ever seen it.') corrected by the final; 2nd sentence partial + final; done"
+    behaviour_vs_main: "No partials unless requested; LV-01..11 unchanged. author-id validation now happens after reading start (same error code, still before ready)"
+  bugfix_invented_text_while_silent:
+    report: "User: lines never spoken were written ('Do not change anything from what is spoken.', 'Thank you.', a repeated loop) while 'silent from my side'"
+    root_cause: "Reproduced: mic room noise (RMS ~0.005-0.01) > fixed 0.003 loudness threshold -> silence treated as speech -> 20 s noise clips -> Whisper invents text on noise (no_speech_prob 0.00), echoing VERBATIM_PROMPT"
+    fix: "Live speech detection = Silero VAD (faster-whisper's bundled silero_vad_v6.onnx via onnxruntime; both already installed; ~0.2 ms/frame). Pluggable SpeechDetector (SileroSpeech | EnergySpeech), setting live_vad=silero default. Segmenter constants now in ms (frame counts identical for the 30 ms energy frame)"
+    tests: "VAD-01..06 added (spec addendum); conftest pins LIVE_VAD=energy because tone fixtures are non-speech to Silero; frozen SG/LV expectations unchanged. 816 passed, 5 skipped (+8; baseline 808 incl. separate instructions-v2 work); ruff + mypy strict clean"
+    e2e: "Real Whisper, Silero on: 15 s silent-mic noise -> done{utterances:0}, no Whisper call; same noise under 5 spoken sentences -> 5 exact finals + partials"
+    follow_ups:
+      - "Invented lines already stored in data/jatin_01/power-of-persistence/manuscript.md: not touched (user data)"
+      - "VERBATIM_PROMPT (MW-07) is what Whisper echoes on non-speech and had no measured benefit: propose removing it"
+      - "REST /v1/dictations still uses the loudness check (is_silent / pause search): a silent noisy upload can still hallucinate"
+
+---
+feature: instructions-v2-locate-then-edit
+design: solutions/instructions_v2_lld.md
+tests: metric/instructions_v2_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: "LLD + test cases approved (frozen after) — user: 'implement' 2026-10-20"}
+
+steps:
+  - {id: 1, done: true, desc: "uv add ollama; Settings: ollama_host, locator_model, locator_timeout_s, locator_max_pages"}
+  - {id: 2, done: true, desc: "services/locator.py (find_scopes, page_matches, error mapping) + IA-03/04/08"}
+  - {id: 3, done: true, desc: "instruction_extractor: locator + field filter + substring guard + backwards search + per-unit context (IV-*, IS-*, IMS-*); rewrite pass-1 IE tests"}
+  - {id: 4, done: true, desc: "ChapterStore: read_laps (all laps, for search; read_lap already exists), apply edits for manuscript / laps (AC-*)"}
+  - {id: 5, done: true, desc: "api/instructions.py: type on /instructions and /accept; main.py lifespan (IA-*, AC-*)"}
+  - {id: 6, done: true, desc: "Verify: make test, ruff, mypy; RL-V1..3 with real gemma + Claude; curls doc"}
+
+review:
+  results: "make test: 808 passed, 2 skipped (baseline 755); ruff + format + mypy strict clean (39 files)"
+  real_models: "RL-V1..3 passed (gemma4:e2b + claude-haiku-4-5): V1 (3,12) located, 'flows' removed, 15.8 s; V2 no location -> found in 2 page checks, line removed, 19.5 s; V3 lap 2 'bridge'->'pul', 7.0 s"
+  e2e: "Live uvicorn + real Whisper + gemma + Claude: spoken 'In lap two, change old bridge to new bridge.' -> type=laps response chapter 2 update -> /accept?type=laps 200 -> laps.md lap 2 = 'She walked to the new bridge.'"
+  behaviour_vs_main:
+    - "Pass 1 now local gemma (was Claude ScopeResult); SCOPE_SYSTEM / ScopeResult / render_outline removed from app"
+    - "No location: backwards gemma search, max 10 pages (was one whole-book Claude call / 422 book_too_large)"
+    - "Chapter + page: Claude sees only that page (D6); an edit on a page it was not shown -> unresolved page_not_found"
+    - "/instructions and /accept responses gain `type` (additive)"
+  test_changes:
+    - "test_instruction_extractor.py rewritten around FakeLocator (per LLD §6); edit-pass cases kept"
+    - "test_instructions_api.py: fake locator added to `agent` fixture; AA-01 exact dict + `type`; add/update round-trip scope set to chapter-only (it edits pages 12 and 13; D6)"
+    - "test_llm.py: ScopeResult sample schema defined locally (removed from app); cases unchanged"
+    - "test_instructions_real_llm.py: real Locator wired in; RL-03 says chapter only so the cached prefix stays big enough (D6). RL-01..03 not re-run (G3 of instructions-and-accept still open)"
+    - "Own test bug fixed: manuscript remove offsets 10-16 -> 10-15 ('flows' is 10-15; lesson L1)"
+  follow_ups:
+    - "Search cost ~6-8 s per page on gemma4:e2b; first call after idle ~24 s (model load)"
+    - "RL-V2 edit left a trailing space after '।' (Claude's quote choice), cosmetic"
+
+---
+feature: manuscript-and-laps
+design: metric/manuscript_laps_test_cases.yml (design summary in header)
+tests: metric/manuscript_laps_test_cases.yml
+status: done   # awaiting_approval -> in_progress -> done
+
+gates:
+  - {id: G1, done: true, desc: "Design + metric/manuscript_laps_test_cases.yml approved (frozen after)"}
+
+steps:
+  - {id: 1, done: true, desc: "ChapterStore: manuscript_path/laps_path; create_book writes both empty (never overwrite)"}
+  - {id: 2, done: true, desc: "ChapterStore: append_to_manuscript, append_to_lap (lock, book-dir check, create-on-write, '# lap N' parse/serialize sorted)"}
+  - {id: 3, done: true, desc: "script_normalizer: escape '# lap N' lines too"}
+  - {id: 4, done: true, desc: "schemas: DictationType enum; DictationResponse + type, lap; chapter/page nullable"}
+  - {id: 5, done: true, desc: "POST /v1/dictations: type form field (default chapter); chapter/page optional, validated per type before STT; fingerprint + type"}
+  - {id: 6, done: true, desc: "Tests MB-*, MM-*, ML-*, MT-*; update solutions/dictation_curls.md"}
+  - {id: 7, done: true, desc: "Verify: make test, ruff, mypy strict; live curl run of all 3 types"}
+
+
+review:
+  approval: "User replied 'approved, implement' (G1)."
+  results: "make test: 560 passed, 2 skipped (baseline 524 + 36 new); ruff clean; mypy strict clean (36 files)"
+  e2e: "Live uvicorn + real MLX Whisper (macOS `say` clips): new book has book.md/manuscript.md/laps.md; 2 manuscript appends in order (chapter=9 ignored); laps 2,1,2 -> '# lap 1' then '# lap 2' with 2 lines; laps without lap number -> 422 missing_field; legacy folder without laps.md -> created on first write"
+  behaviour_vs_main:
+    - "No `type` sent: same file writes, same errors; response adds type: chapter, lap: null"
+    - "Missing chapter / page_number for type=chapter: was FastAPI 422 validation body, now 422 {error.code: missing_field}"
+    - "A dictated line '# lap N' is now escaped to '\\# lap N' in chapters too (was only '# page N')"
+  test_fix_during_impl: "ML-10 test input changed to a transcript that is exactly '# lap 7' (pipeline joins segments with spaces, so a multi-line fake transcript never reaches storage). Spec unchanged."
+  follow_ups:
+    - "/instructions edits chapters only (not manuscript / laps)"
+    - "Whisper initial_prompt = 'Do not change anything from what is spoken.' added on user request (MW-07). Real-model check: no effect on output (Whisper treats it as prior text, not an instruction; 'the the' still became 'that the'). Proposed a disfluent style-sample prompt instead; user hasn't decided."
+  addendum_get_by_type:
+    approval: "User replied 'do it' to MG-01..11 (2026-10-20)"
+    results: "make test: 574 passed, 2 skipped (+13 incl. parametrized); ruff + mypy strict clean"
+    e2e: "Live: GET ?type=laps lap 2 -> 2 lines, available_laps [1,2]; lap 5 -> 404 lap_not_found; ?type=manuscript -> whole file; no type and no page -> 422 missing_field"
+    behaviour_vs_main: "type=chapter GET unchanged except 3 additive keys; AG-01 exact-dict expectation extended with them, nothing removed. Missing page: was FastAPI 422 body, now 422 missing_field"
+
+---
 feature: long-audio-segmentation
 design: /Users/jatinmishra/.claude/plans/currently-the-application-rejects-fancy-galaxy.md (-> solutions/dictations_lld.md §6)
 tests: metric/long_audio_test_cases.yml

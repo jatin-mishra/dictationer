@@ -1,0 +1,123 @@
+# Status: APPROVED 2026-10-20 — FROZEN. Frozen once approved; any change needs explicit user review + approval.
+# Design: /Users/jatinmishra/.claude/plans/tell-me-plan-for-zazzy-lemon.md (MVP scope)
+# Part A: POST /v1/dictations splits long audio at pauses (no overlap at those cuts); falls back
+#         to today's 10s/2s overlap window when no pause is found.
+# Part B: new, independent WS /v1/dictations/live: PCM16 LE 16 kHz mono in -> one `final` per
+#         utterance out; each utterance appended to the book immediately.
+# Numbers below were computed by running a prototype of the exact rule (lesson L1), not by hand.
+#
+# Pause rule (shared): 30 ms frames (480 samples) on a grid from the clip start;
+#   frame silent  <=> RMS < silence_rms_threshold (0.003).
+# Part A rule: for each cut, search frames lying fully inside [start+segment_s-3s, start+segment_s);
+#   take the minimum-RMS frame (ties -> the latest); if it is silent, cut at that frame's midpoint
+#   (next segment starts at the cut, no overlap); otherwise cut at start+segment_s and step back
+#   overlap_s (today's behaviour). Clips <= segment_s + tolerance are never split (as today).
+# Part B rule: speech starts on the first voiced frame (300 ms pre-roll kept); an utterance ends after
+#   600 ms (20 frames) of silence (that silence is kept in the clip); hard cap 20 s; an utterance with
+#   < 9 voiced frames (~250 ms) is dropped; flush() returns the buffered tail.
+# Fixtures: tone = 440 Hz sine, amplitude 0.3; silence = zeros. Defaults: segment 10 s, overlap 2 s,
+#   tolerance 0.25 s. Cut lists are (start_s, end_s, overlaps_previous).
+
+success_metrics:
+  - {id: PLM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: PLM2, desc: "Existing test suite passes unchanged (LS-*, LA-* etc.)", target: 100%}
+  - {id: PLM3, desc: "Audio without pauses: identical segments and text to main", target: exact}
+  - {id: PLM4, desc: ruff + mypy strict clean, target: 0 errors}
+  - {id: PLM5, desc: "Manual: 3 spoken sentences with pauses over WS -> 3 finals, persisted in order", target: pass}
+
+failure_criteria:
+  - an audio sample missing from every segment, or duplicated across a pause cut
+  - text duplicated or dropped at a pause cut
+  - transcript_merge applied across a pause cut (or skipped across an overlap cut)
+  - segment_strategy=fixed differs from main in any way
+  - REST /v1/dictations request/response contract changes
+  - WS writes text for an utterance that failed transcription
+  - WS loses already-buffered speech when the client disconnects without `stop`
+
+test_cases:
+  # ───────── Config ─────────
+  - {id: PC-01, scenario: default Settings(), expect: "segment_strategy == 'pause'"}
+  - {id: PC-02, scenario: "env SEGMENT_STRATEGY=fixed", expect: picked up}
+  - {id: PC-03, scenario: "SEGMENT_STRATEGY=other", expect: ValidationError}
+
+  # ───────── frame_rms (pure) ─────────
+  - {id: PF-01, scenario: "1 s of zeros", expect: "33 frames (trailing 160 samples ignored), all 0.0"}
+  - {id: PF-02, scenario: "1 s tone amplitude 0.3", expect: "every frame ~0.212 (0.3/sqrt2), > threshold"}
+
+  # ───────── split_at_pauses (pure) ─────────
+  - {id: PS-01, scenario: 5 s tone, expect: "[(clip, False)], same object"}
+  - {id: PS-02, scenario: "10.0 s and 10.25 s tone", expect: 1 segment each (tolerance, as today)}
+  - {id: PS-03, scenario: "tone 8 + silence 1 + tone 6 (15 s)", expect: "[(0, 8.985, F), (8.985, 15, F)]: cut inside the pause, no overlap"}
+  - {id: PS-04, scenario: "tone 25 s (no pause)", expect: "[(0,10,F), (8,18,T), (16,25,T)]: identical to split()"}
+  - {id: PS-05, scenario: "tone 8.5 + silence 1 + tone 20.5 (30 s): pause cut then fallback", expect: "[(0,9.465,F), (9.465,19.465,F), (17.465,27.465,T), (25.465,30,T)]"}
+  - {id: PS-06, scenario: "tone 8 + silence 17 (25 s): ties pick latest silent frame", expect: "[(0,9.975,F), (9.975,19.935,F), (19.935,25,F)]"}
+  - {id: PS-07, scenario: "tone 3 + silence 1 + tone 11 (15 s): pause before the search window", expect: "[(0,10,F), (8,15,T)]: ignored, fallback"}
+  - {id: PS-08, scenario: "tone8 sil1 tone8 sil1 tone8 sil1 tone13 (40 s)", expect: "[(0,8.985,F), (8.985,17.985,F), (17.985,26.985,F), (26.985,36.985,F), (34.985,40,T)]"}
+  - {id: PS-09, scenario: "property over PS-03/05/06/08 clips", expect: "union covers every sample; pause-cut neighbours touch exactly (end[i]==start[i+1]); overlap neighbours overlap exactly 2 s; each segment <= 10 s; segments are numpy views (no copy)"}
+  - {id: PS-10, scenario: "property: tone-only clips 10.5..60 s step 0.37 s", expect: "same bounds as split() and every flag after the first is True"}
+
+  # ───────── speech pipeline / API (ScriptedTranscriber: word i at [i/2, i/2+0.5) s) ─────────
+  - {id: PA-01, scenario: "API: PS-05 audio (30 s, hinglish)", expect: "engine calls at [0, 9.465, 17.465, 25.465]; text == spoken(0,30) (no dup, no loss); written to page"}
+  - {id: PA-02, scenario: "API: PS-03 audio (15 s)", expect: "2 calls [0, 8.985]; text == spoken(0,15); transcript_merge NOT called"}
+  - {id: PA-03, scenario: "API: same as PA-01 with SEGMENT_STRATEGY=fixed", expect: "calls [0, 8, 16, 24] (as main); text == spoken(0,30)"}
+  - {id: PA-04, scenario: "API: PS-05 audio with ?merge=false", expect: "segment texts plain-joined (overlap words repeated at overlap cuts only)"}
+  - {id: PA-05, scenario: "API: existing LA-01..LA-05 tests", expect: unchanged pass (LA-04 tone8+sil17 -> calls [0], text spoken(0,10))}
+  - {id: PA-06, scenario: "API: segment failure on a pause-split request", expect: "502, nothing written (as today)"}
+
+  # ───────── UtteranceSegmenter (pure) ─────────
+  - {id: SG-01, scenario: "tone 1, silence 1, tone 1, silence 1", expect: "2 clips: 1.62 s (no pre-roll at stream start) and 1.92 s (0.3 pre-roll + 1.02 + 0.6); flush() -> None"}
+  - {id: SG-02, scenario: "SG-01 audio fed in 1-sample and 1000-sample chunks", expect: "identical clips (chunk-size independent)"}
+  - {id: SG-03, scenario: "5 s silence", expect: "0 clips; flush() -> None"}
+  - {id: SG-04, scenario: "silence 1, 50 ms tone, silence 1 (click)", expect: "0 clips (< 9 voiced frames)"}
+  - {id: SG-05, scenario: "tone 1, silence 0.3, tone 1 (gap < 600 ms) then flush", expect: "0 clips from feed; flush() -> one 2.3 s clip"}
+  - {id: SG-06, scenario: "tone 25 s then flush", expect: "1 clip of 20.01 s (cap, frame-aligned) + flush 4.99 s; total samples == input"}
+  - {id: SG-07, scenario: "silence 1, tone 1, silence 1", expect: "1 clip of 1.92 s whose first 0.3 s is the pre-roll silence"}
+  - {id: SG-08, scenario: "tone 1.5 then flush (stop mid-speech)", expect: "flush() -> 1.5 s clip (includes the <1-frame remainder)"}
+
+  # ───────── WS /v1/dictations/live (FakeTranscriber 'Hello world.') ─────────
+  - {id: LV-01, scenario: "start(chapter 1 page 1, en) -> SG-01 audio as PCM16 -> stop", expect: "ready, final 'Hello world.' x2, done; GET page == 'Hello world.' twice, in order"}
+  - {id: LV-02, scenario: "binary frame before start", expect: "error code bad_message, close; nothing written"}
+  - {id: LV-03, scenario: "missing or invalid author-id header", expect: "error invalid_author_id before ready"}
+  - {id: LV-04, scenario: "start for non-existent chapter / book", expect: "error chapter_not_found / book_not_found before ready; no engine call"}
+  - {id: LV-05, scenario: "start with type=chapter and no page_number", expect: "error missing_field"}
+  - {id: LV-06, scenario: "odd-length binary frame", expect: "error bad_audio_frame, close"}
+  - {id: LV-07, scenario: "tone 1.5 s then client disconnects without stop", expect: "tail flushed, transcribed and written (GET shows it)"}
+  - {id: LV-08, scenario: "type=laps (lap 2) and type=manuscript", expect: "text appended to laps.md '# lap 2' / manuscript.md"}
+  - {id: LV-09, scenario: "transcriber raises TranscriptionUpstreamError on 2nd utterance", expect: "1st final written; error transcription_upstream_error; close; 2nd not written"}
+  - {id: LV-10, scenario: "language hi", expect: "routed to the Sarvam fake (engine in ready = 'sarvam')"}
+  - {id: LV-11, scenario: "only silence then stop", expect: "ready, done with 0 finals; no engine call; nothing written"}
+
+  # ───────── Addendum 2026-10-20: live partials (user: "implement that"; partials for all languages: "2. yes") ─────────
+  # Rule: start.partials (bool, default false: existing clients unchanged). While an utterance is open
+  # and has >= 9 voiced frames, every +1 s of utterance audio (if no partial is in flight) the audio
+  # so far is transcribed in the background and sent as {"type":"partial","text"}. Partials are never
+  # written to the book. A partial whose utterance has already been finalised is dropped (never sent
+  # after that utterance's final). A failed partial is ignored (best effort); the session continues.
+  - {id: SG-09, scenario: "pending() during silence / 1.5 s into a tone / after the utterance ends", expect: "None / clip of the open audio (>= 1.5 s) / None; utterance counter +1 per ended utterance (kept or dropped)"}
+  - {id: LP-01, scenario: "en, partials=true, tone 3 s + silence 1 s, stop", expect: "ready, >= 1 partial 'Hello world.', then final, then done; every partial precedes the final; page == 'Hello world.' once"}
+  - {id: LP-02, scenario: "partials omitted (default) with the same audio", expect: "no partial messages (ready, final, done)"}
+  - {id: LP-03, scenario: "hi, partials=true", expect: "partials sent (routed to the Sarvam fake)"}
+  - {id: LP-04, scenario: "partial transcription slower than the utterance (fake sleeps 0.3 s on the partial call)", expect: "stale partial dropped: messages ready, final, done only"}
+  - {id: LP-05, scenario: "transcriber raises on the partial call only", expect: "session continues: final + done; nothing extra written"}
+  - {id: LP-06, scenario: "tone 0.8 s + silence 1 s with partials=true", expect: "no partial (utterance never reaches 1 s)"}
+  # Browser auth (user: "web app"): browsers cannot set WS headers, so start may carry author_id.
+  # Header still works (LV-03 unchanged); if both are sent they must be equal.
+  - {id: LH-01, scenario: "no header; start.author_id='jatin_01'", expect: "ready; text written under jatin_01"}
+  - {id: LH-02, scenario: "no header; start.author_id='bad id!'", expect: "error invalid_author_id before ready"}
+  - {id: LH-03, scenario: "header 'jatin_01' and start.author_id 'other_02'", expect: "error invalid_author_id (conflict) before ready"}
+  - {id: LH-04, scenario: "header and start.author_id equal", expect: "ready"}
+
+  # ───────── Bug fix 2026-10-20: invented text while the author was silent ─────────
+  # Report: lines never spoken were written ("Do not change anything from what is spoken.", "Thank you.",
+  # a repeated loop) while the mic was silent. Root cause (reproduced): mic room noise (RMS ~0.005-0.01)
+  # is above the fixed 0.003 loudness threshold, so silence was treated as speech (20 s noise clips),
+  # and Whisper invents text on noise, echoing its initial_prompt. Fix: live speech detection uses
+  # Silero VAD (bundled in faster-whisper; noise up to RMS 0.1 -> 0% speech, real speech ~67%).
+  # Setting live_vad: silero (default) | energy. Frozen SG/LV cases keep their exact numbers with the
+  # energy detector (tests pin LIVE_VAD=energy: tones are not speech to Silero).
+  - {id: VAD-01, scenario: "Silero segmenter: 5 s white noise at RMS 0.005, 0.01, 0.03", expect: "0 clips, flush() None (the reported bug)"}
+  - {id: VAD-02, scenario: "Silero segmenter: 3 s 440 Hz tone", expect: "0 clips"}
+  - {id: VAD-03, scenario: "Silero segmenter: macOS `say` speech, 2 sentences with a 1.2 s pause (skipped without `say`)", expect: "2 clips; with RMS 0.01 noise added: still 2 clips"}
+  - {id: VAD-04, scenario: "Silero segmenter: VAD-03 speech fed whole vs in 1000-sample chunks", expect: "identical clips"}
+  - {id: VAD-05, scenario: "WS with live_vad=silero, partials=true: 10 s of RMS 0.01 noise, stop", expect: "ready, done{utterances:0}; transcriber never called; nothing written"}
+  - {id: VAD-06, scenario: "default Settings()", expect: "live_vad == 'silero'; LIVE_VAD=other -> ValidationError"}

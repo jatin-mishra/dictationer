@@ -11,6 +11,9 @@ from app.services.transcription.base import TranscriberBusyError
 
 log = logging.getLogger(__name__)
 
+# Whisper reads initial_prompt as preceding transcript (style context), not as an instruction.
+VERBATIM_PROMPT = "Do not change anything from what is spoken."
+
 
 class MlxWhisperTranscriber:
     """Local Whisper on Apple Silicon. Metal is effectively one GPU, so inference is serialised
@@ -32,6 +35,7 @@ class MlxWhisperTranscriber:
             path_or_hf_repo=self._model_repo,
             language="en",
             task="transcribe",
+            initial_prompt=VERBATIM_PROMPT,
             condition_on_previous_text=False,  # avoids repetition loops on short clips
         )
         return str(result["text"])

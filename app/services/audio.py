@@ -132,3 +132,57 @@ def split(
         if end == total:
             return segments
         start += stride
+
+
+FRAME = 480  # 30 ms at 16 kHz: the unit pauses are measured in
+PAUSE_SEARCH_S = 3.0  # a pause cut is looked for in the last 3 s before each segment end
+
+
+def frame_rms(pcm: npt.NDArray[np.float32]) -> npt.NDArray[np.float64]:
+    """Loudness of each whole 30 ms frame from the start of `pcm`; a trailing partial frame is
+    ignored."""
+    n = len(pcm) // FRAME
+    frames = pcm[: n * FRAME].reshape(n, FRAME).astype(np.float64)
+    return np.sqrt(np.mean(np.square(frames), axis=1))
+
+
+def split_at_pauses(
+    clip: AudioClip,
+    segment_s: float,
+    overlap_s: float,
+    tolerance_s: float,
+    silence_rms_threshold: float,
+) -> list[tuple[AudioClip, bool]]:
+    """Like `split`, but cut inside a pause when there is one, so no word is sliced in two.
+
+    Before each segment end, the quietest whole frame of the last PAUSE_SEARCH_S is found (ties go
+    to the latest, keeping segments long). If it is silent, the cut is at its midpoint and the next
+    segment starts there, with no overlap. Otherwise the cut is `split`'s fixed window with
+    `overlap_s` of overlap. Returns (segment, overlaps_previous), so callers merge text only where
+    audio was actually heard twice. Audio with no pauses yields exactly `split`'s windows.
+    """
+    total = len(clip.pcm)
+    max_len = int(round((segment_s + tolerance_s) * SAMPLE_RATE))
+    if total <= max_len:
+        return [(clip, False)]
+    rms = frame_rms(clip.pcm)
+    size = int(round(segment_s * SAMPLE_RATE))
+    overlap = int(round(overlap_s * SAMPLE_RATE))
+    search = int(round(PAUSE_SEARCH_S * SAMPLE_RATE))
+    segments: list[tuple[AudioClip, bool]] = []
+    start, overlaps = 0, False
+    while total - start > size:  # as in `split`: a window that reaches the end is the last
+        end = start + size
+        first = -(-max(start, end - search) // FRAME)  # first frame starting inside the window
+        last = end // FRAME  # frames [first, last) end at or before `end`
+        window = rms[first:last]
+        if len(window) and window.min() < silence_rms_threshold:
+            quietest = first + int(np.flatnonzero(window == window.min())[-1])
+            cut = quietest * FRAME + FRAME // 2
+            segments.append((AudioClip(clip.pcm[start:cut]), overlaps))
+            start, overlaps = cut, False
+        else:
+            segments.append((AudioClip(clip.pcm[start:end]), overlaps))
+            start, overlaps = end - overlap, True
+    segments.append((AudioClip(clip.pcm[start:]), overlaps))
+    return segments

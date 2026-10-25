@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack, asynccontextmanager
 
 import httpx
+import ollama
 from anthropic import AsyncAnthropic
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +17,7 @@ from app.middleware.request_id import RequestIdMiddleware
 from app.schemas.dictation import Language
 from app.services.idempotency import IdempotencyCache
 from app.services.llm import AgentLLM
+from app.services.locator import Locator
 from app.services.transcription.mlx_whisper import MlxWhisperTranscriber
 from app.services.transcription.router import TranscriberRouter
 from app.services.transcription.sarvam import SarvamTranscriber
@@ -59,6 +61,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 "ANTHROPIC_AGENT_API_KEY / ANTHROPIC_AGENT_MODEL not set: /instructions will fail"
             )
         app.state.agent_llm = AgentLLM(llm_client, llm_model, settings.llm_effort)
+        ollama_client = await stack.enter_async_context(
+            ollama.AsyncClient(host=settings.ollama_host, timeout=settings.locator_timeout_s)
+        )
+        app.state.locator = Locator(ollama_client, settings.locator_model)
 
         if not sarvam_api_key:
             log.warning("SARVAM_API_KEY is not set: hi / hinglish dictation will fail")

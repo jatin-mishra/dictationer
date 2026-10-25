@@ -11,6 +11,7 @@ dependencies = [
     "httpx>=0.28.1",
     "mlx-whisper>=0.4.3",
     "numpy>=2.5.4",
+    "ollama>=0.6.3",
     "pydantic-settings>=2.6",
     "python-multipart>=0.0.32",
     "pyttsx3>=2.99",
@@ -39,7 +40,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mlx_whisper"]
+module = ["mlx_whisper", "faster_whisper.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

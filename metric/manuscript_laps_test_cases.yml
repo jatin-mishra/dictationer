@@ -1,0 +1,118 @@
+# Status: DRAFT — PENDING USER REVIEW.
+# Once approved this file is FROZEN; any change needs explicit user review + approval.
+# Feature: POST /v1/dictations gains `type` = chapter (default) | manuscript | laps.
+#
+# Design summary
+#   - create_book also writes empty {book}/manuscript.md and {book}/laps.md (never overwrites).
+#   - Older books (no such files): the file is created on its first write.
+#   - type=chapter    : unchanged (chapter + page_number required, chapter must exist).
+#   - type=manuscript : chapter / page_number ignored; text appended to manuscript.md
+#                       (same newline join as page appends).
+#   - type=laps       : `chapter` carries the lap number; page_number ignored.
+#                       laps.md holds "# lap N" headings, text under each; same lap again ->
+#                       appended under that heading; new lap -> new heading. Headings kept sorted
+#                       by lap number (same as pages in a chapter).
+#   - Book folder must exist for manuscript / laps (404 book_not_found), checked BEFORE STT.
+#   - Response gains `type` and `lap`; `chapter` / `page` become nullable (null when unused).
+#   - Idempotency fingerprint includes type.
+#   - A dictated line that looks like "# lap N" is escaped (like "# page N") so it can't create
+#     a phantom lap.
+
+success_metrics:
+  - {id: MLM1, desc: All test cases below pass (make test), target: 100%}
+  - {id: MLM2, desc: All existing tests pass unchanged (requests without `type` behave exactly as today), target: 100%}
+  - {id: MLM3, desc: STT calls for a manuscript / laps dictation into a missing book, target: 0}
+  - {id: MLM4, desc: ruff + mypy strict clean, target: 0 errors}
+
+failure_criteria:
+  - a request without `type` behaves differently from main
+  - type=manuscript or type=laps writes into or requires any chapter file
+  - an existing manuscript.md / laps.md is overwritten by create_book
+  - a failed transcription leaves partial text in manuscript.md / laps.md
+
+test_cases:
+  # ───────── Book creation ─────────
+  - {id: MB-01, scenario: POST /v1/books new book, expect: "book.md, manuscript.md, laps.md all exist; manuscript.md and laps.md empty"}
+  - {id: MB-02, scenario: "legacy book folder (chapters, no book.md) that already has a non-empty manuscript.md", expect: "201; manuscript.md byte-identical; laps.md created empty"}
+  - {id: MB-03, scenario: POST /v1/books for an existing book, expect: "409 book_exists; manuscript.md / laps.md untouched"}
+
+  # ───────── Manuscript ─────────
+  - {id: MM-01, scenario: "type=manuscript, no chapter / page_number fields", expect: "201; transcript in manuscript.md; response {type: manuscript, chapter: null, page: null, lap: null}"}
+  - {id: MM-02, scenario: two manuscript dictations, expect: "file = text1 + '\\n' + text2 (order kept)"}
+  - {id: MM-03, scenario: "type=manuscript with chapter=3 page_number=12 sent", expect: "201; written to manuscript.md; no chapter file touched; chapter / page null in response"}
+  - {id: MM-04, scenario: "type=manuscript with chapter=99 (no such chapter)", expect: "201 (chapter ignored, no chapter_not_found)"}
+  - {id: MM-05, scenario: old book without manuscript.md, expect: "201; manuscript.md created holding just the text"}
+  - {id: MM-06, scenario: book does not exist, expect: "404 book_not_found; 0 STT calls; no folder/file created"}
+  - {id: MM-07, scenario: transcription fails (upstream error), expect: "error status as today; manuscript.md unchanged"}
+  - {id: MM-08, scenario: Devanagari text, expect: stored NFC, read back identical}
+  - {id: MM-09, scenario: concurrent manuscript dictations (same book), expect: both texts present, nothing lost}
+
+  # ───────── Laps ─────────
+  - {id: ML-01, scenario: "type=laps chapter=1, no page_number", expect: "201; laps.md = '# lap 1\\n<text>\\n'; response {type: laps, lap: 1, chapter: null, page: null}"}
+  - {id: ML-02, scenario: lap 1 then lap 1 again, expect: "one '# lap 1' heading; both texts under it, joined by '\\n'"}
+  - {id: ML-03, scenario: lap 1 then lap 2, expect: "two headings '# lap 1', '# lap 2', each with its own text"}
+  - {id: ML-04, scenario: lap 3 then lap 1, expect: "headings sorted: lap 1 before lap 3"}
+  - {id: ML-05, scenario: "type=laps without chapter (lap number)", expect: "422; 0 STT calls"}
+  - {id: ML-06, scenario: "type=laps chapter=0 / 1001", expect: 422}
+  - {id: ML-07, scenario: "type=laps chapter=5 with no chapter-5.md", expect: "201 (lap number is not a chapter; no chapter_not_found)"}
+  - {id: ML-08, scenario: old book without laps.md, expect: "201; laps.md created"}
+  - {id: ML-09, scenario: book does not exist, expect: "404 book_not_found; 0 STT calls"}
+  - {id: ML-10, scenario: "transcript contains a line '# lap 7'", expect: "escaped as '\\# lap 7'; laps.md still has only the real lap heading"}
+  - {id: ML-11, scenario: "laps.md hand-edited with '#Lap 2' (lenient form)", expect: "parsed as lap 2; next write canonicalises to '# lap 2'"}
+  - {id: ML-12, scenario: transcription fails, expect: laps.md unchanged}
+  - {id: ML-13, scenario: concurrent dictations into lap 1 and lap 2, expect: both stored under correct headings}
+
+  # ───────── Type field / backward compatibility ─────────
+  - {id: MT-01, scenario: no type field (existing client), expect: "behaves exactly as today; response adds type: chapter, lap: null"}
+  - {id: MT-02, scenario: "type=chapter missing chapter or page_number", expect: "422; 0 STT calls"}
+  - {id: MT-03, scenario: "type=chapter, chapter missing on disk", expect: 404 chapter_not_found (unchanged)}
+  - {id: MT-04, scenario: "type=foo", expect: 422}
+  - {id: MT-05, scenario: "same Idempotency-Key, first type=manuscript then type=laps", expect: "second request rejected as key reuse with different body (same as other fingerprint mismatch today)"}
+  - {id: MT-06, scenario: "same Idempotency-Key replayed with same type=laps body", expect: "cached response; text written once"}
+  - {id: MT-07, scenario: "type=chapter dictation", expect: "manuscript.md and laps.md untouched"}
+  - {id: MT-08, scenario: "manuscript / laps writes, then GET chapter page and /instructions read_book", expect: "manuscript.md / laps.md not treated as chapters"}
+
+# ═══════ Addendum 2026-10-20 — GET page by type. Status: APPROVED 2026-10-20 (frozen) ═══════
+# GET /v1/books/{book}/chapters/{chapter_number}?type=...&page=N
+#   - type=chapter (default): unchanged; `page` required.
+#   - type=laps: path chapter_number = lap number; `page` ignored; returns that lap's text.
+#   - type=manuscript: path chapter_number and `page` ignored; returns whole manuscript.md.
+#   - Response gains `type`, `lap`, `available_laps`; `chapter` / `page` null when unused;
+#     `available_pages` empty unless type=chapter. content_sha256 always set.
+get_test_cases:
+  - {id: MG-01, scenario: "GET without type (existing client)", expect: "response as today + type: chapter, lap: null, available_laps: []"}
+  - {id: MG-02, scenario: "type=chapter without page", expect: "422 missing_field"}
+  - {id: MG-03, scenario: "type=laps, laps 1 and 3 dictated, GET chapter_number=3", expect: "200 {type: laps, lap: 3, content: lap 3 text, available_laps: [1, 3], chapter: null, page: null}"}
+  - {id: MG-04, scenario: "type=laps, lap 2 never dictated", expect: "404 lap_not_found"}
+  - {id: MG-05, scenario: "type=laps with page=5 sent", expect: "page ignored; same as MG-03"}
+  - {id: MG-06, scenario: "type=laps on older book with no laps.md", expect: "404 lap_not_found"}
+  - {id: MG-07, scenario: "type=manuscript, any chapter_number (e.g. 1 or 999), no page", expect: "200 {type: manuscript, content: manuscript text (no trailing newline), chapter: null, page: null, lap: null}"}
+  - {id: MG-08, scenario: "type=manuscript on new book (empty file) or older book (no file)", expect: "200, content ''"}
+  - {id: MG-09, scenario: "type=manuscript / laps, book does not exist", expect: "404 book_not_found"}
+  - {id: MG-10, scenario: "content_sha256 for laps / manuscript", expect: "== sha256(content)"}
+  - {id: MG-11, scenario: "type=foo", expect: 422}
+
+# ═══════ Addendum 2026-10-20 — /accept by type. Status: SUPERSEDED by metric/instructions_v2_test_cases.yml (AC-*), never approved ═══════
+# POST /v1/books/{book}/chapters/{chapter_number}/accept?type=chapter|manuscript
+#   - type=chapter (default): unchanged.
+#   - type=manuscript: same body shape (ChapterEdits). Path chapter_number, body.chapter and
+#     the block's `page` are ignored; exactly one page block allowed. Its content_sha256 must
+#     equal sha256 of GET ?type=manuscript content, else 409 page_changed. Offsets index that
+#     content. Same edit executor (all-or-nothing, Devanagari guards), same lock as appends.
+#   - Response gains `type`, `content`, `content_sha256` (set for manuscript, pages: []);
+#     `chapter` null for manuscript.
+#   - type=laps -> 422 (not supported).
+accept_test_cases:
+  - {id: MA-01, scenario: "/accept without type (existing client)", expect: "unchanged + type: chapter, content: null, content_sha256: null"}
+  - {id: MA-02, scenario: "type=manuscript, remove edit on GET'd manuscript with right sha", expect: "200; manuscript.md updated; response content == new GET content, sha matches"}
+  - {id: MA-03, scenario: "type=manuscript add + update in one block (Devanagari)", expect: "200; both applied; stored NFC"}
+  - {id: MA-04, scenario: "type=manuscript, stale content_sha256 (dictation appended after GET)", expect: "409 page_changed; file unchanged"}
+  - {id: MA-05, scenario: "type=manuscript, body.chapter=7, path chapter=1, page=99", expect: "200 (all ignored, no chapter_mismatch)"}
+  - {id: MA-06, scenario: "type=manuscript with two page blocks", expect: "422 invalid_edit; file unchanged"}
+  - {id: MA-07, scenario: "type=manuscript, offset beyond content / splits a matra", expect: "422 invalid_edit; file unchanged"}
+  - {id: MA-08, scenario: "type=manuscript, book missing", expect: "404 book_not_found"}
+  - {id: MA-09, scenario: "type=manuscript, empty manuscript, add at offset 0 with sha256('')", expect: "200; text stored"}
+  - {id: MA-10, scenario: "type=manuscript, inserted text contains a '# page 3' line", expect: "escaped like chapter edits"}
+  - {id: MA-11, scenario: "type=manuscript accepted twice (replay)", expect: "second -> 409 page_changed"}
+  - {id: MA-12, scenario: "type=laps", expect: "422"}
+  - {id: MA-13, scenario: "type=manuscript edit", expect: "chapter files and laps.md untouched"}

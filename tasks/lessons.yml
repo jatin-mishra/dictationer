@@ -16,3 +16,11 @@ lessons:
     date: 2026-10-19
     pattern: "Trusted an LLM-chosen label (edit action) that code could compute; a deletion came back as an update."
     rule: "When an LLM output field is derivable from other fields (action from old vs new text, offsets from quotes), compute it in code and treat the LLM value as a hint. Test with the real failing output."
+  - id: L5
+    date: 2026-10-20
+    pattern: "Designed production-grade (backpressure, retries, session caps) when the user wanted an MVP."
+    rule: "Before designing, confirm scope (MVP / prototype vs production). Default to the simplest end-to-end version and list hardening under 'Deferred'."
+  - id: L6
+    date: 2026-10-20
+    pattern: "Speech detection tuned and tested only on synthetic tones and digital silence; a real microphone's room noise beat the fixed loudness threshold, so silence became 'speech' and Whisper invented text."
+    rule: "For any audio threshold or detector, test with realistic input before shipping: mic-level noise (RMS 0.005-0.03), noise-only sessions, and speech mixed with noise. Never let a model see audio that a speech detector hasn't confirmed as speech."
